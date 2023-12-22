@@ -43,6 +43,9 @@ public class ProxyController {
 
         logger.debug("mirror | {} | {}", method.name(), request.getRequestURI());
 
+        // TODO: Create tmdb client
+
+        // Based on https://stackoverflow.com/a/49429650/12347616
         String requestUrl = request
             .getRequestURI()
             .replaceAll("^/tmdb", "");
@@ -72,10 +75,14 @@ public class ProxyController {
         headers.set("Authorization", "Bearer " + "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzY2ZjNmUxZGQyMzFiZDFmMmNhYTE5OGU3MzE3YTZhNCIsInN1YiI6IjYwZWZiOTZlYTQ0ZDA5MDAyZDQ0ZjNlNSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.nvvleDHS5FWTK9UbhKfeuW8L5w4hyjGHAphNtQJuYSY");
 
         HttpEntity<String> httpEntity = new HttpEntity<>(body, headers);
+
+        // TODO Add restTemplate bean in order to mock
         RestTemplate restTemplate = new RestTemplate();
         try {
             return restTemplate.exchange(uri, method, httpEntity, String.class);
         } catch(HttpStatusCodeException e) {
+            // TODO: return custom exception on ResourceAccessException
+            // https://stackoverflow.com/a/52271541/12347616
             return ResponseEntity.status(e.getStatusCode())
                 .headers(e.getResponseHeaders())
                 .body(e.getResponseBodyAsString());
