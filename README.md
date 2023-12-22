@@ -24,6 +24,6 @@ cd backend
 ```bash
 cd frontend
 npm install
-npm 
+npm run start
 ```
 
