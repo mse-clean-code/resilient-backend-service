@@ -19,6 +19,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Enumeration;
+import java.util.Objects;
 
 /**
  * @author Kacper Urbaniec
@@ -64,8 +65,19 @@ public class ProxyController {
         Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             String headerName = headerNames.nextElement();
+            if (Objects.equals(headerName, "Accept-Encoding")) continue;
             headers.set(headerName, request.getHeader(headerName));
         }
+
+        // Fix encoding
+        // Lead to 'Undocumented Error:OK' on Swagger
+        // Debugger showed (in Chromium only) net::ERR_INCOMPLETE_CHUNKED_ENCODING 200 (OK)
+        // Fix: https://stackoverflow.com/questions/54852953/postman-shows-could-not-get-any-response-even-though-response-is-ok
+        headers.set("Accept-Encoding", "*/*");
+
+        // API key
+        // TODO: Move to config
+        headers.set("Authorization", "Bearer " + "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIzY2ZjNmUxZGQyMzFiZDFmMmNhYTE5OGU3MzE3YTZhNCIsInN1YiI6IjYwZWZiOTZlYTQ0ZDA5MDAyZDQ0ZjNlNSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.nvvleDHS5FWTK9UbhKfeuW8L5w4hyjGHAphNtQJuYSY");
 
         HttpEntity<String> httpEntity = new HttpEntity<>(body, headers);
         RestTemplate restTemplate = new RestTemplate();
