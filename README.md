@@ -1,2 +1,12 @@
 # resilient-backend-service
-Manuel was here
+
+
+
+## 🚀 Run
+
+### Backend
+
+```bash
+cd backend
+./gradlew bootRun
+```
