@@ -35,17 +35,9 @@ public class ProxyController {
         return "test";
     }
 
-
-
-    // @RequestMapping(value = "{_:^(?!swagger-ui/index\\.html$|tmdb-v[34]\\.json$|test$).*}")
-    // @RequestMapping(value = "{_:^(?!swagger-ui/index\\.html|dashboard).*$}**")
-
-    // https://stackoverflow.com/a/22411379/12347616
-
-    // @RequestMapping(value = "{_:^(?!swagger-ui|tmdb-v[34].json|4).*}/**")
-
-    @RequestMapping({"/tmdb/3/**", "/tmdb/4/**"})
-    public ResponseEntity mirrorRest(@RequestBody(required = false) String body,
+    // Catches all tmdb operations besides lists
+    @RequestMapping({"/tmdb/3/**", "/tmdb/4/auth/**", "/tmdb/4/account/**"})
+    public ResponseEntity<String> mirrorRest(@RequestBody(required = false) String body,
                                      HttpMethod method, HttpServletRequest request, HttpServletResponse response)
         throws URISyntaxException {
 
@@ -90,12 +82,15 @@ public class ProxyController {
         }
     }
 
-    @RequestMapping(value = "/3/search/movie")
-    public ResponseEntity searchMovie(@RequestBody(required = false) String body,
+    // TODO: Move to own feature
+    // Catches all list CRUD operations
+    @RequestMapping({"/tmdb/4/list/**", "/tmdb/4/{_}"})
+    @SuppressWarnings("MVCPathVariableInspection")
+    public ResponseEntity<String> listActions(@RequestBody(required = false) String body,
                                      HttpMethod method, HttpServletRequest request, HttpServletResponse response)
         throws URISyntaxException {
 
-        logger.debug("search Movie | {} | {}", method.name(), request.getRequestURI());
+        logger.debug("Custom List Action | {} | {}", method.name(), request.getRequestURI());
 
         return mirrorRest(body, method, request, response);
     }
