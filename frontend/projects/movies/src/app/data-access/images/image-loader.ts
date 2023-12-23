@@ -3,7 +3,7 @@ import { W154H205 } from './image-sizes';
 import { MY_LIST_FALLBACK, POSTER_FALLBACK } from '../../constants';
 
 export const provideTmdbImageLoader = (
-  cfg: { baseUrl: string } = { baseUrl: `https://image.tmdb.org/t/p/w` }
+  cfg: { baseUrl: string } = { baseUrl: `http://localhost:8080/image.tmdb/t/p/w` }
 ) => {
   const { baseUrl } = cfg;
   return {
