@@ -74,7 +74,7 @@ public class ProxyClient {
         @NotNull HttpMethod method, @NotNull String path,
         @NotNull HttpServletRequest request, String body,
         @NotNull HttpServletResponse response
-        ) {
+    ) {
         // File fetch based on https://stackoverflow.com/a/62528659/12347616
         logger.debug("fetchTmdbImage({}, {}, {}, {}, {})", method, path, request.getQueryString(), body, response);
         var uri = buildPathURI(imageUri, path, request);
