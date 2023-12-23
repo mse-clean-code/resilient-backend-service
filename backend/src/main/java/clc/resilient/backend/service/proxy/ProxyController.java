@@ -25,12 +25,6 @@ public class ProxyController {
         this.client = client;
     }
 
-    @GetMapping("/test")
-    public String test() {
-        logger.debug("/test");
-        return "test";
-    }
-
     /**
      * Endpoint that proxies all tmdb methods besides list functionality.
      */
@@ -48,7 +42,6 @@ public class ProxyController {
         return client.fetchTmdbApi(method, path, request, body);
     }
 
-
     /**
      * Endpoint that proxies all tmdb image methods.
      */
@@ -64,17 +57,5 @@ public class ProxyController {
             .getRequestURI()
             .replaceAll("^/image.tmdb", "");
         client.fetchTmdbImage(method, path, request, body, response);
-    }
-
-    // TODO: Move to own feature
-    // Catches all list CRUD operations
-    @RequestMapping({"/tmdb/4/list/**", "/tmdb/4/{_}"})
-    @SuppressWarnings("MVCPathVariableInspection")
-    public ResponseEntity<String> listActions(@RequestBody(required = false) String body,
-                                              HttpMethod method, HttpServletRequest request, HttpServletResponse response) {
-
-        logger.debug("Custom List Action | {} | {}", method.name(), request.getRequestURI());
-
-        return tmdbApi(method, request, body, response);
     }
 }
