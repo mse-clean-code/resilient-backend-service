@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
+import java.util.Set;
 
 
 @Getter
@@ -18,6 +19,7 @@ public class ListItem {
     private boolean isPrivate;
     private List<MovieBody> items;
     private int number_of_items;
+    private String backdrop_path;
 
     public int getNumber_of_items() {
         return items.size();
