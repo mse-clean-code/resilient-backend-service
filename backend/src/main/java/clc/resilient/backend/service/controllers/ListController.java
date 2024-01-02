@@ -1,5 +1,6 @@
 package clc.resilient.backend.service.controllers;
 
+import clc.resilient.backend.service.controllers.messages.*;
 import clc.resilient.backend.service.data.objects.MovieList;
 import clc.resilient.backend.service.data.services.MovieListQueryService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,8 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Collections;
 import java.util.NoSuchElementException;
 
 /**
@@ -27,12 +27,12 @@ public class ListController {
     private MovieListQueryService movieListQueryService;
 
     @RequestMapping({"/tmdb/4/account/{account_id}/lists"})
-    public ResponseEntity<Map> accountLists(
-        @RequestBody(required = false) String body,
-        String account_id,
-        HttpMethod method,
-        HttpServletRequest request,
-        HttpServletResponse response
+    public ResponseEntity<ResponseOfMovieListsPaginated> accountLists(
+            @RequestBody(required = false) String body,
+            String account_id,
+            HttpMethod method,
+            HttpServletRequest request,
+            HttpServletResponse response
     ) {
         /*
         {
@@ -86,17 +86,13 @@ public class ListController {
         logger.debug("Custom List Action | {} | {}", method.name(), request.getRequestURI());
         var movieLists = movieListQueryService.getAll();
         int totalResults = movieLists.size();
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.putIfAbsent("page", 1);
-        responseBody.putIfAbsent("total_pages", 1);
-        responseBody.putIfAbsent("total_results", totalResults);
-        responseBody.putIfAbsent("results", movieLists);
-        return ResponseEntity.ok(responseBody);
+        ResponseOfMovieListsPaginated responseOfMovieListsPaginated = new ResponseOfMovieListsPaginated(1, 1, totalResults, movieLists);
+        return ResponseEntity.ok(responseOfMovieListsPaginated);
     }
 
     // Add Movie to List
     @PostMapping("/tmdb/4/list/{list_id}/items")
-    public ResponseEntity<Map> addItemToList(
+    public ResponseEntity<ResponseMessage> addItemToList(
             @PathVariable("list_id") String listId,
             @RequestBody MovieList movieList
     ) {
@@ -116,16 +112,13 @@ public class ListController {
             ]
         }
          */
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.putIfAbsent("success", true);
-        responseBody.putIfAbsent("status_code", 1);
-        responseBody.putIfAbsent("status_message", "Success.");
-        responseBody.putIfAbsent("results", movieList.getItems());
-        return ResponseEntity.ok(responseBody);
+        ResponseMessage response = new ResponseWithResults(true, "Success.", Collections.singletonList(updatedList.getId()));
+        return ResponseEntity.ok(response);
     }
+
     // Add Movie to List
     @PutMapping("/tmdb/4/list/{list_id}")
-    public ResponseEntity<Map> updateItem(
+    public ResponseEntity<ResponseMessage> updateItem(
             @PathVariable("list_id") String listId,
             @RequestBody MovieList movieList
     ) {
@@ -145,20 +138,17 @@ public class ListController {
             ]
         }
          */
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.putIfAbsent("success", true);
-        responseBody.putIfAbsent("status_code", 1);
-        responseBody.putIfAbsent("status_message", "Success.");
-        responseBody.putIfAbsent("results", movieList.getItems());
-        return ResponseEntity.ok(responseBody);
+        ResponseMessage response = new ResponseWithResults(true, "Success.", Collections.singletonList(updatedList.getId()));
+        return ResponseEntity.ok(response);
     }
+
     // Get List Details
     @GetMapping("/tmdb/4/list/{list_id}")
     public ResponseEntity<MovieList> getListDetails(
             @PathVariable("list_id") Long listId
     ) {
         try {
-            var MovieList = movieListQueryService.getItem(listId);
+            var movieList = movieListQueryService.getItem(listId);
             /* Awaited response
             {
                 "average_rating": 7.8,
@@ -235,56 +225,42 @@ public class ListController {
                 "total_pages": 1,
                 "total_results": 2
             }*/
-            return ResponseEntity.ok(MovieList);
-        } catch(NoSuchElementException ex) {
+            return ResponseEntity.ok(movieList);
+        } catch (NoSuchElementException ex) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
-    // Create List
+
     @PostMapping("/tmdb/4/list")
-    public ResponseEntity<Map> createList(
+    public ResponseEntity<ResponseMessage> createList(
             @RequestBody MovieList requestBody
     ) {
         // Implement logic to create a new list
         //return {"success":true,"status_code":1,"status_message":"Success.","id":8284604}
-        //
         var movieList = movieListQueryService.add(requestBody);
-        Map<String, Object> response = new HashMap<>();
-        response.putIfAbsent("success", true);
-        response.putIfAbsent("status_code", 1);
-        response.putIfAbsent("status_message", "Success.");
-        response.putIfAbsent("id", movieList.getId());
+        ResponseMessage response = new ResponseWithId(true, "Success.", movieList.getId());
         return ResponseEntity.ok(response);
     }
 
-    // Delete List
     @DeleteMapping("/tmdb/4/list/{list_id}")
-    public ResponseEntity<Map> deleteList(
+    public ResponseEntity<ResponseMessage> deleteList(
             @PathVariable("list_id") Long listId
     ) {
         movieListQueryService.deleteItem(listId);
         // Implement logic to delete the list with ID listId
-        Map<String, Object> response = new HashMap<>();
-        response.putIfAbsent("success", true);
-        response.putIfAbsent("status_code", 13);
-        response.putIfAbsent("status_message", "The item/record was deleted successfully.");
-        return ResponseEntity.ok(response);
+        ResponseMessage responseMessage = new DeleteListResponse(true, "The item/record was deleted successfully.");
+        return ResponseEntity.ok(responseMessage);
     }
 
 
-    // Remove Movie from List
     @DeleteMapping("/tmdb/4/list/{list_id}/items")
-    public ResponseEntity<Map> removeItemFromList(
+    public ResponseEntity<ResponseWithResults> removeItemFromList(
             @PathVariable("list_id") int listId,
             @RequestBody MovieList requestBody
     ) {
         var removedMovies = movieListQueryService.deleteMovie(requestBody);
         // Implement logic to remove a movie from the list with ID listId
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.putIfAbsent("success", true);
-        responseBody.putIfAbsent("status_code", 1);
-        responseBody.putIfAbsent("status_message", "Success.");
-        responseBody.putIfAbsent("results", removedMovies);
-        return ResponseEntity.ok(responseBody);
+        ResponseWithResults response = new ResponseWithResults(true, "Success.", Collections.singletonList(removedMovies));
+        return ResponseEntity.ok(response);
     }
 }
