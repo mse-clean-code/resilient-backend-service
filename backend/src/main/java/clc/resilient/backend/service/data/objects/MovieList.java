@@ -1,7 +1,7 @@
 package clc.resilient.backend.service.data.objects;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,15 +16,18 @@ public class MovieList {
     private Long id;
     private String name;
     private String description;
-    private String iso_639_1;
+    @JsonProperty("iso_639_1")
+    private String iso6391;
     private boolean isPrivate;
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "movie_list_id")
     private List<MovieRelation> items;
-    private int number_of_items;
+    @JsonProperty("number_of_items")
+    private int numberOfItems;
     private String backdrop_path;
-    public int getNumber_of_items() {
+
+    public int getNumberOfItems() {
         return items.size();
     }
 }

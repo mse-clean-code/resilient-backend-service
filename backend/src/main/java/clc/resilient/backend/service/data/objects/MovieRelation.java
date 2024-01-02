@@ -18,6 +18,7 @@ public class MovieRelation {
     @JoinColumn(name = "movie_list_id")
     @JsonIgnore
     private MovieList movieList;
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
