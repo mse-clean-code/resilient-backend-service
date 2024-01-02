@@ -1,14 +1,23 @@
-package clc.resilient.backend.service.movie.objects;
+package clc.resilient.backend.service.data.objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+@Entity
+@Table(name = "movie_relation")
 @Getter
 @Setter
-public class MovieBody {
-    int movie_id;
+public class MovieRelation {
+    @Id
+    Long media_id;
     String media_type;
 
+    @ManyToOne
+    @JoinColumn(name = "movie_list_id")
+    @JsonIgnore
+    private MovieList movieList;
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -18,8 +27,8 @@ public class MovieBody {
             return false; // If the object is null or of a different class, return false
         }
         // Cast the object to the appropriate type
-        MovieBody otherMovie = (MovieBody) obj;
+        MovieRelation otherMovie = (MovieRelation) obj;
         // Compare the movie_id attribute
-        return this.getMovie_id() == otherMovie.getMovie_id();
+        return this.getMedia_id().equals(otherMovie.getMedia_id());
     }
 }
