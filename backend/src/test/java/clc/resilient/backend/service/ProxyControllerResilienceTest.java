@@ -7,6 +7,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 import io.github.resilience4j.retry.RetryRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,6 +24,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.IntStream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
@@ -30,10 +33,13 @@ import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.http.HttpStatus.OK;
+import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("wiremock")
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ProxyControllerResilienceTest {
 
     @RegisterExtension
@@ -51,6 +57,9 @@ public class ProxyControllerResilienceTest {
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
+    @Autowired
+    private RateLimiterRegistry rateLimiterRegistry;
+
     @Mock
     private ProxyClient client;
 
@@ -58,15 +67,38 @@ public class ProxyControllerResilienceTest {
 
 
     @BeforeEach
-    public void resetResilience4jAndWiremock() {
+    public void resetCircuitBreakerRetryAndWiremock() {
         // Reset resilience4j to run tests in any order
+        // Works for retry but oddly not for rate limiter
         // https://github.com/resilience4j/resilience4j/issues/1105
         var circuitBreaker = circuitBreakerRegistry
             .circuitBreaker(ProxyResilience.PROXY_CIRCUIT_BREAKER);
         circuitBreaker.reset();
-        retryRegistry.remove(ProxyResilience.PROXY_RETRY);
 
+        var retry = retryRegistry.retry(ProxyResilience.PROXY_RETRY);
+        retryRegistry.remove(ProxyResilience.PROXY_RETRY);
+        retryRegistry.addConfiguration(retry.getName(), retry.getRetryConfig());
+
+        /* var rateLimiter = rateLimiterRegistry
+            .rateLimiter(ProxyResilience.PROXY_RATE_LIMITER);
+        // var waitNanos = rateLimiter.reservePermission(40);
+        // var start = System.nanoTime();
+        // while(System.nanoTime() - start < waitNanos);
+        rateLimiterRegistry.remove(ProxyResilience.PROXY_RATE_LIMITER);
+        rateLimiterRegistry.addConfiguration(ProxyResilience.PROXY_RATE_LIMITER, rateLimiter.getRateLimiterConfig());
+        //
+        // var test = rateLimiterRegistry.rateLimiter(ProxyResilience.PROXY_RETRY);
+
+
+ */
         TMDB_API.resetRequests();
+    }
+
+    @AfterEach
+    public void removeRateLimiter() {
+        // Rate limiter cannot be reset so first tests verifies its functionality
+        // After the test run (be it successfully or not) it is removed
+        rateLimiterRegistry.remove(ProxyResilience.PROXY_RATE_LIMITER);
     }
 
     @Test
@@ -280,8 +312,28 @@ public class ProxyControllerResilienceTest {
 
 
     @Test
+    @Order(1) // This first needs to run always first, see explanation in `removeRateLimiter`
     void testTmdbApi_RateLimiter() {
-        // Initialize controller with mock client
+        TMDB_API.stubFor(WireMock.get(urlPathMatching("/3/.*"))
+            .willReturn(ok()));
+
+        var requestUrl = "/tmdb/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
+        Map<Integer, Integer> responseStatusCount = new ConcurrentHashMap<>();
+
+        IntStream.rangeClosed(1, 150)
+            .parallel()
+            .forEach(i -> {
+                ResponseEntity<String> response = restTemplate.getForEntity(requestUrl, String.class);
+                int statusCode = response.getStatusCode().value();
+                responseStatusCount.put(statusCode, responseStatusCount.getOrDefault(statusCode, 0) + 1);
+            });
+
+        assertEquals(2, responseStatusCount.keySet()
+            .size());
+        assertTrue(responseStatusCount.containsKey(TOO_MANY_REQUESTS.value()));
+        assertTrue(responseStatusCount.containsKey(OK.value()));
+
+        /* // Initialize controller with mock client
         controller = new ProxyController(client);
 
         HttpServletRequest request = mock(HttpServletRequest.class);
@@ -304,7 +356,7 @@ public class ProxyControllerResilienceTest {
         }
 
         // Depending on rate limiter configuration, adjust the expected call count
-        assertTrue(callCount < 10, "Rate limiter should have limited the number of successful calls");
+        assertTrue(callCount < 10, "Rate limiter should have limited the number of successful calls"); */
     }
 
 
