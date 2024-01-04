@@ -1,5 +1,6 @@
 package clc.resilient.backend.service.proxy;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -32,8 +33,8 @@ public class ProxyController {
     /**
      * Endpoint that proxies all tmdb methods besides list functionality.
      */
-//    @CircuitBreaker(name = "CircuitBreakerService")
     @Retry(name = ProxyResilience.PROXY_RETRY, fallbackMethod = "tmdbApiRetryFallback")
+    @CircuitBreaker(name = ProxyResilience.PROXY_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @RequestMapping({"/tmdb/3/**", "/tmdb/4/auth/**", "/tmdb/4/account/**"})
     public ResponseEntity<String> tmdbApi(
         HttpMethod method, HttpServletRequest request,
@@ -51,7 +52,7 @@ public class ProxyController {
     /**
      * Endpoint that proxies all tmdb image methods.
      */
-    @CircuitBreaker(name = "CircuitBreakerService")
+    @CircuitBreaker(name = ProxyResilience.PROXY_CIRCUIT_BREAKER)
     @Retry(name = ProxyResilience.PROXY_RETRY, fallbackMethod = "tmdbApiRetryFallback")
     @GetMapping(value = "/image.tmdb/**", produces = "application/octet-stream")
     public void tmdbImage(
@@ -74,5 +75,16 @@ public class ProxyController {
     public ResponseEntity<String> tmdbApiRetryFallback(Exception ex) {
         logger.debug("tmdbApiRetryFallback({})", ex.getMessage());
         return new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    /**
+     * Function that is executed when circuit breaker is open.
+     */
+    @SuppressWarnings("unused")
+    public ResponseEntity<String> circuitBreakerFallback(CallNotPermittedException ex) {
+        // Note: Specific exception type is important! Else retry fallback will be always executed
+        // https://resilience4j.readme.io/docs/getting-started-3#fallback-methods
+        logger.debug("tmdbApiRetryFallback({})", ex.getMessage());
+        return new ResponseEntity<>("service is unavailable", HttpStatus.SERVICE_UNAVAILABLE);
     }
 }

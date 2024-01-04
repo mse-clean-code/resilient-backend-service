@@ -6,4 +6,5 @@ package clc.resilient.backend.service.proxy;
  */
 public class ProxyResilience {
     public static final String PROXY_RETRY = "proxyRetryApi";
+    public static final String PROXY_CIRCUIT_BREAKER = "proxyCircuitBreaker";
 }

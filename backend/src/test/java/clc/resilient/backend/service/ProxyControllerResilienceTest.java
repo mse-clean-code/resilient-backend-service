@@ -6,6 +6,7 @@ import clc.resilient.backend.service.proxy.ProxyResilience;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.retry.RetryRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,6 +22,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import java.util.stream.IntStream;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
@@ -45,6 +48,9 @@ public class ProxyControllerResilienceTest {
     @Autowired
     private RetryRegistry retryRegistry;
 
+    @Autowired
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
     @Mock
     private ProxyClient client;
 
@@ -55,7 +61,9 @@ public class ProxyControllerResilienceTest {
     public void resetResilience4jAndWiremock() {
         // Reset resilience4j to run tests in any order
         // https://github.com/resilience4j/resilience4j/issues/1105
-        // var retryApi = retryRegistry.retry(ProxyResilience.PROXY_RETRY);
+        var circuitBreaker = circuitBreakerRegistry
+            .circuitBreaker(ProxyResilience.PROXY_CIRCUIT_BREAKER);
+        circuitBreaker.reset();
         retryRegistry.remove(ProxyResilience.PROXY_RETRY);
 
         TMDB_API.resetRequests();
@@ -179,31 +187,56 @@ public class ProxyControllerResilienceTest {
 
     @Test
     void testTmdbApi_CircuitBreaker1() {
-        // Initialize controller with mock client
-        controller = new ProxyController(client);
+        TMDB_API.stubFor(WireMock.get(urlPathMatching("/3/.*"))
+            .willReturn(serverError()));
 
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        HttpServletResponse response = mock(HttpServletResponse.class);
+        var requestUrl = "/tmdb/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
+        IntStream.rangeClosed(1, 5)
+            .forEach(i -> {
+                // Retry responses
+                ResponseEntity<String> response = restTemplate.getForEntity(requestUrl, String.class);
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                assertThat(response.getBody()).isEqualTo("all retries have exhausted");
+            });
 
-        String requestUri = "/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
-        when(request.getRequestURI()).thenReturn(requestUri);
+        IntStream.rangeClosed(1, 5)
+            .forEach(i -> {
+                // Circuit breaker responses
+                ResponseEntity<String> response = restTemplate.getForEntity(requestUrl, String.class);
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                assertThat(response.getBody()).isEqualTo("service is unavailable");
+            });
 
-        // Always throw an exception
-        when(client.fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null)))
-                .thenThrow(new RuntimeException("Persistent failure"));
+        // Count times 3 as retry is also executed
+        TMDB_API.verify(3*5, getRequestedFor(urlPathMatching("/3/.*")));
 
-        // Call the method multiple times to trigger the circuit breaker
-        for (int i = 0; i < 10; i++) {
-            try {
-                controller.tmdbApi(HttpMethod.GET, request, null, response);
-            } catch (RuntimeException e) {
-                // Assert the type of exception if needed
-                System.out.printf(e.getMessage());
-            }
-        }
 
-        // Verify the number of calls to the client
-        verify(client, atMost(5)).fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null));
+        // // Initialize controller with mock client
+        // controller = new ProxyController(client);
+        //
+        // HttpServletRequest request = mock(HttpServletRequest.class);
+        // HttpServletResponse response = mock(HttpServletResponse.class);
+        //
+        // String requestUri = "/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
+        // when(request.getRequestURI()).thenReturn(requestUri);
+        //
+        // // Always throw an exception
+        // when(client.fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null)))
+        //         .thenThrow(new RuntimeException("Persistent failure"));
+        //
+        // // Call the method multiple times to trigger the circuit breaker
+        // for (int i = 0; i < 10; i++) {
+        //     try {
+        //         controller.tmdbApi(HttpMethod.GET, request, null, response);
+        //     } catch (RuntimeException e) {
+        //         // Assert the type of exception if needed
+        //         System.out.printf(e.getMessage());
+        //     }
+        // }
+        //
+        // // Verify the number of calls to the client
+        // verify(client, atMost(5)).fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null));
+        //
     }
 
 
