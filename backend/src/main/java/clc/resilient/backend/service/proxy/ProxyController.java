@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,7 +33,7 @@ public class ProxyController {
      * Endpoint that proxies all tmdb methods besides list functionality.
      */
 //    @CircuitBreaker(name = "CircuitBreakerService")
-    @Retry(name = "retryApi")
+    @Retry(name = ProxyResilience.PROXY_RETRY, fallbackMethod = "tmdbApiRetryFallback")
     @RequestMapping({"/tmdb/3/**", "/tmdb/4/auth/**", "/tmdb/4/account/**"})
     public ResponseEntity<String> tmdbApi(
         HttpMethod method, HttpServletRequest request,
@@ -51,7 +52,7 @@ public class ProxyController {
      * Endpoint that proxies all tmdb image methods.
      */
     @CircuitBreaker(name = "CircuitBreakerService")
-    @Retry(name = "retryApi")
+    @Retry(name = ProxyResilience.PROXY_RETRY, fallbackMethod = "tmdbApiRetryFallback")
     @GetMapping(value = "/image.tmdb/**", produces = "application/octet-stream")
     public void tmdbImage(
         HttpMethod method, HttpServletRequest request,
@@ -64,5 +65,14 @@ public class ProxyController {
             .getRequestURI()
             .replaceAll("^/image.tmdb", "");
         client.fetchTmdbImage(method, path, request, body, response);
+    }
+
+    /**
+     * Function that is executed when all retries attempts have exhausted.
+     */
+    @SuppressWarnings("unused")
+    public ResponseEntity<String> tmdbApiRetryFallback(Exception ex) {
+        logger.debug("tmdbApiRetryFallback({})", ex.getMessage());
+        return new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE);
     }
 }
