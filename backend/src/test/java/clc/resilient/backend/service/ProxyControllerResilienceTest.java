@@ -1,24 +1,19 @@
 package clc.resilient.backend.service;
 
-import clc.resilient.backend.service.proxy.ProxyClient;
-import clc.resilient.backend.service.proxy.ProxyController;
 import clc.resilient.backend.service.proxy.ProxyResilience;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 import io.github.resilience4j.retry.RetryRegistry;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
@@ -31,8 +26,8 @@ import java.util.stream.IntStream;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 
@@ -60,11 +55,7 @@ public class ProxyControllerResilienceTest {
     @Autowired
     private RateLimiterRegistry rateLimiterRegistry;
 
-    @Mock
-    private ProxyClient client;
-
-    private ProxyController controller;
-
+    private final UrlPathPattern proxyApiPath = urlPathMatching("/3/.*");
 
     @BeforeEach
     public void resetCircuitBreakerRetryAndWiremock() {
@@ -79,18 +70,6 @@ public class ProxyControllerResilienceTest {
         retryRegistry.remove(ProxyResilience.PROXY_RETRY);
         retryRegistry.addConfiguration(retry.getName(), retry.getRetryConfig());
 
-        /* var rateLimiter = rateLimiterRegistry
-            .rateLimiter(ProxyResilience.PROXY_RATE_LIMITER);
-        // var waitNanos = rateLimiter.reservePermission(40);
-        // var start = System.nanoTime();
-        // while(System.nanoTime() - start < waitNanos);
-        rateLimiterRegistry.remove(ProxyResilience.PROXY_RATE_LIMITER);
-        rateLimiterRegistry.addConfiguration(ProxyResilience.PROXY_RATE_LIMITER, rateLimiter.getRateLimiterConfig());
-        //
-        // var test = rateLimiterRegistry.rateLimiter(ProxyResilience.PROXY_RETRY);
-
-
- */
         TMDB_API.resetRequests();
     }
 
@@ -103,47 +82,13 @@ public class ProxyControllerResilienceTest {
 
     @Test
     void testTmdbApi_Success() {
-        TMDB_API.stubFor(WireMock.get(urlPathMatching("/3/.*"))
+        TMDB_API.stubFor(WireMock.get(proxyApiPath)
             .willReturn(ok()));
-
-        /* try {
-            var test = restTemplate.getForEntity("http://localhost:9090/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1", String.class);
-            System.out.println(
-                test.toString()
-            );
-        } catch (Exception ex) {
-            System.out.println(
-                "hey"
-            );
-        } */
 
         var requestUrl = "/tmdb/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
         var response = restTemplate.getForEntity(requestUrl, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-
-
-
-
-
-
-        /* // Initialize controller with mock client
-        controller = new ProxyController(client);
-
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        HttpServletResponse response = mock(HttpServletResponse.class);
-
-        String requestUri = "/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
-        when(request.getRequestURI()).thenReturn(requestUri);
-
-        // Use argument matchers as needed, ensure they match the method signature
-        when(client.fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null)))
-                .thenReturn(ResponseEntity.ok("Success"));
-
-        ResponseEntity<String> responseEntity = controller.tmdbApi(HttpMethod.GET, request, null, response);
-
-        assertNotNull(responseEntity, "ResponseEntity should not be null");
-        assertEquals("Success", responseEntity.getBody()); */
     }
 
     @Test
@@ -151,12 +96,12 @@ public class ProxyControllerResilienceTest {
         // Scenario: First external API request fails, but retry recover via second one!
         // Mock scenario with wiremock
         // https://stackoverflow.com/a/60006300/12347616
-        TMDB_API.stubFor(WireMock.get(urlPathMatching("/3/.*"))
+        TMDB_API.stubFor(WireMock.get(proxyApiPath)
             .inScenario("Retry")
             .whenScenarioStateIs(STARTED)
             .willReturn(serverError())
             .willSetStateTo("First Retry"));
-        TMDB_API.stubFor(WireMock.get(urlPathMatching("/3/.*"))
+        TMDB_API.stubFor(WireMock.get(proxyApiPath)
             .inScenario("Retry")
             .whenScenarioStateIs("First Retry")
             .willReturn(ok())
@@ -166,45 +111,13 @@ public class ProxyControllerResilienceTest {
         var response = restTemplate.getForEntity(requestUrl, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        TMDB_API.verify(2, getRequestedFor(urlPathMatching("/3/.*")));
-
-        // // Initialize controller with mock client
-        // controller = new ProxyController(client);
-        //
-        // HttpServletRequest request = mock(HttpServletRequest.class);
-        // HttpServletResponse response = mock(HttpServletResponse.class);
-        //
-        // String requestUri = "/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
-        // when(request.getRequestURI()).thenReturn(requestUri);
-        //
-        // // Simulate transient failure
-        // when(client.fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null)))
-        //         .thenThrow(new RuntimeException("Transient failure"))
-        //         .thenThrow(new RuntimeException("Transient failure"))
-        //         .thenReturn(ResponseEntity.ok("Success"));
-        //
-        // ResponseEntity<String> responseEntity = null;
-        // try {
-        //     responseEntity = controller.tmdbApi(HttpMethod.GET, request, null, response);
-        // } catch (RuntimeException e) {
-        //     fail("Should not throw exception after retries");
-        // }
-        //
-        // assertNotNull(responseEntity, "ResponseEntity should not be null");
-        // assertEquals("Success", responseEntity.getBody());
-        // verify(client, times(3)).fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null));
-
-        //        ResponseEntity<String> responseEntity = controller.tmdbApi(HttpMethod.GET, request, null, response);
-//
-//        assertNotNull(responseEntity, "ResponseEntity should not be null");
-//        assertEquals("Success", responseEntity.getBody());
-//        verify(client, times(3)).fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null));
+        TMDB_API.verify(2, getRequestedFor(proxyApiPath));
     }
 
     @Test
     void testTmdbApi_Retry_Failure() {
         // Scenario: All external requests fails and retry limit is exceeded
-        TMDB_API.stubFor(WireMock.get(urlPathMatching("/3/.*"))
+        TMDB_API.stubFor(WireMock.get(proxyApiPath)
             .willReturn(serverError()));
 
         var requestUrl = "/tmdb/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
@@ -212,14 +125,12 @@ public class ProxyControllerResilienceTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(response.getBody()).isEqualTo("all retries have exhausted");
-        TMDB_API.verify(3, getRequestedFor(urlPathMatching("/3/.*")));
+        TMDB_API.verify(3, getRequestedFor(proxyApiPath));
     }
 
-
-
     @Test
-    void testTmdbApi_CircuitBreaker1() {
-        TMDB_API.stubFor(WireMock.get(urlPathMatching("/3/.*"))
+    void testTmdbApi_CircuitBreaker() {
+        TMDB_API.stubFor(WireMock.get(proxyApiPath)
             .willReturn(serverError()));
 
         var requestUrl = "/tmdb/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
@@ -240,81 +151,13 @@ public class ProxyControllerResilienceTest {
             });
 
         // Count times 3 as retry is also executed
-        TMDB_API.verify(3*5, getRequestedFor(urlPathMatching("/3/.*")));
-
-
-        // // Initialize controller with mock client
-        // controller = new ProxyController(client);
-        //
-        // HttpServletRequest request = mock(HttpServletRequest.class);
-        // HttpServletResponse response = mock(HttpServletResponse.class);
-        //
-        // String requestUri = "/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
-        // when(request.getRequestURI()).thenReturn(requestUri);
-        //
-        // // Always throw an exception
-        // when(client.fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null)))
-        //         .thenThrow(new RuntimeException("Persistent failure"));
-        //
-        // // Call the method multiple times to trigger the circuit breaker
-        // for (int i = 0; i < 10; i++) {
-        //     try {
-        //         controller.tmdbApi(HttpMethod.GET, request, null, response);
-        //     } catch (RuntimeException e) {
-        //         // Assert the type of exception if needed
-        //         System.out.printf(e.getMessage());
-        //     }
-        // }
-        //
-        // // Verify the number of calls to the client
-        // verify(client, atMost(5)).fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null));
-        //
+        TMDB_API.verify(3*5, getRequestedFor(proxyApiPath));
     }
-
-
-    @Test
-    void testTmdbApi_CircuitBreaker() {
-        // Initialize controller with mock client
-        controller = new ProxyController(client);
-
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        HttpServletResponse response = mock(HttpServletResponse.class);
-
-        String requestUri = "/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
-        when(request.getRequestURI()).thenReturn(requestUri);
-
-        // Always throw an exception
-        when(client.fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null)))
-                .thenThrow(new RuntimeException("Persistent failure"));
-
-        // Call the method multiple times to trigger the circuit breaker
-        for (int i = 0; i < 5; i++) {
-            try {
-                ResponseEntity<String> responseEntity = controller.tmdbApi(HttpMethod.GET, request, null, response);
-                assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-
-            } catch (Exception ignored) {
-            }
-        }
-
-        // Call the method multiple times to trigger the circuit breaker
-        for (int i = 0; i < 5; i++) {
-            try {
-                ResponseEntity<String> responseEntity = controller.tmdbApi(HttpMethod.GET, request, null, response);
-                assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-            } catch (Exception ignored) {
-            }
-        }
-
-        // Verify that the circuit breaker opened after the specified number of calls
-        verify(client, atMost(5)).fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null));
-    }
-
 
     @Test
     @Order(1) // This first needs to run always first, see explanation in `removeRateLimiter`
     void testTmdbApi_RateLimiter() {
-        TMDB_API.stubFor(WireMock.get(urlPathMatching("/3/.*"))
+        TMDB_API.stubFor(WireMock.get(proxyApiPath)
             .willReturn(ok()));
 
         var requestUrl = "/tmdb/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
@@ -332,32 +175,6 @@ public class ProxyControllerResilienceTest {
             .size());
         assertTrue(responseStatusCount.containsKey(TOO_MANY_REQUESTS.value()));
         assertTrue(responseStatusCount.containsKey(OK.value()));
-
-        /* // Initialize controller with mock client
-        controller = new ProxyController(client);
-
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        HttpServletResponse response = mock(HttpServletResponse.class);
-
-        String requestUri = "/3/search/movie?query=godzilla&include_adult=false&language=en-US&page=1";
-        when(request.getRequestURI()).thenReturn(requestUri);
-
-        when(client.fetchTmdbApi(eq(HttpMethod.GET), eq(requestUri), any(HttpServletRequest.class), eq(null)))
-                .thenReturn(ResponseEntity.ok("Success"));
-
-        // Call the method multiple times rapidly
-        int callCount = 0;
-        for (int i = 0; i < 10; i++) {
-            try {
-                controller.tmdbApi(HttpMethod.GET, request, null, response);
-                callCount++;
-            } catch (Exception ignored) {
-            }
-        }
-
-        // Depending on rate limiter configuration, adjust the expected call count
-        assertTrue(callCount < 10, "Rate limiter should have limited the number of successful calls"); */
     }
-
 
 }
