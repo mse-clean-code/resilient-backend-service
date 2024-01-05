@@ -1,5 +1,7 @@
 package clc.resilient.backend.service.proxy;
 
+import clc.resilient.backend.service.proxy.exceptions.ApiOfflineException;
+import clc.resilient.backend.service.proxy.exceptions.ApiRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -62,7 +65,13 @@ public class ProxyClient {
             // Throw custom exception when external API is offline
             // https://stackoverflow.com/a/52271541/12347616
             logger.error("tmdb is offline");
-            throw new TmdbOfflineException(ex);
+            throw new ApiOfflineException(ex);
+        } catch (RestClientException ex) {
+            logger.error("tmdb request failed");
+            throw new ApiRequestException(ex);
+        } catch (Exception ex) {
+            logger.error("unknown tmdb access exception");
+            throw new IllegalStateException("unknown exception", ex);
         }
     }
 
@@ -88,7 +97,13 @@ public class ProxyClient {
             // Throw custom exception when external API is offline
             // https://stackoverflow.com/a/52271541/12347616
             logger.error("tmdb is offline");
-            throw new TmdbOfflineException(ex);
+            throw new ApiOfflineException(ex);
+        } catch (RestClientException ex) {
+            logger.error("tmdb request failed");
+            throw new ApiRequestException(ex);
+        } catch (Exception ex) {
+            logger.error("unknown tmdb access exception");
+            throw new IllegalStateException("unknown exception", ex);
         }
     }
 

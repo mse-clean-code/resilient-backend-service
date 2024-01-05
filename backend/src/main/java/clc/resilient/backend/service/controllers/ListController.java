@@ -3,6 +3,10 @@ package clc.resilient.backend.service.controllers;
 import clc.resilient.backend.service.controllers.messages.*;
 import clc.resilient.backend.service.data.objects.MovieList;
 import clc.resilient.backend.service.data.services.MovieListQueryService;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -15,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.NoSuchElementException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeoutException;
 
 /**
  * @author Kacper Urbaniec
@@ -26,8 +33,11 @@ public class ListController {
     @Autowired
     private MovieListQueryService movieListQueryService;
 
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
+    @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
     @RequestMapping({"/tmdb/4/account/{account_id}/lists"})
-    public ResponseEntity<ResponseOfMovieListsPaginated> accountLists(
+    public CompletionStage<ResponseEntity<ResponseOfMovieListsPaginated>> accountLists(
             @RequestBody(required = false) String body,
             String account_id,
             HttpMethod method,
@@ -84,20 +94,32 @@ public class ListController {
         }
          */
         logger.debug("Custom List Action | {} | {}", method.name(), request.getRequestURI());
-        var movieLists = movieListQueryService.getAll();
-        int totalResults = movieLists.size();
-        ResponseOfMovieListsPaginated responseOfMovieListsPaginated = new ResponseOfMovieListsPaginated(1, 1, totalResults, movieLists);
-        return ResponseEntity.ok(responseOfMovieListsPaginated);
+        return CompletableFuture.supplyAsync(() -> {
+            // Your existing logic here
+            var movieLists = movieListQueryService.getAll();
+            int totalResults = movieLists.size();
+            ResponseOfMovieListsPaginated responseOfMovieListsPaginated =
+                    new ResponseOfMovieListsPaginated(1, 1, totalResults, movieLists);
+            return ResponseEntity.ok(responseOfMovieListsPaginated);
+        });
     }
 
     // Add Movie to List
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @PostMapping("/tmdb/4/list/{list_id}/items")
     public ResponseEntity<ResponseMessage> addItemToList(
             @PathVariable("list_id") String listId,
             @RequestBody MovieList movieList
     ) {
         // Implement logic to add a movie to the list with ID listId
+        logger.debug("Add movie to list with ID: {}", listId);
+
         var updatedList = movieListQueryService.add(movieList);
+        if (updatedList == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ResponseWithResults(false, "Failed to add item to the list.", Collections.emptyList()));
+        }
         /*
         {
             "success": true,
@@ -117,13 +139,21 @@ public class ListController {
     }
 
     // Add Movie to List
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @PutMapping("/tmdb/4/list/{list_id}")
     public ResponseEntity<ResponseMessage> updateItem(
             @PathVariable("list_id") String listId,
             @RequestBody MovieList movieList
     ) {
         // Implement logic to add a movie to the list with ID listId
+        logger.debug("Update item with ID: {}", listId);
+
         var updatedList = movieListQueryService.add(movieList);
+        if (updatedList == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ResponseWithResults(false, "Failed to update item.", Collections.emptyList()));
+        }
         /*
         {
             "success": true,
@@ -143,11 +173,15 @@ public class ListController {
     }
 
     // Get List Details
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @GetMapping("/tmdb/4/list/{list_id}")
     public ResponseEntity<MovieList> getListDetails(
             @PathVariable("list_id") Long listId
     ) {
         try {
+            logger.debug("Get List details from List with id: {}", listId);
+
             var movieList = movieListQueryService.getItem(listId);
             /* Awaited response
             {
@@ -225,42 +259,114 @@ public class ListController {
                 "total_pages": 1,
                 "total_results": 2
             }*/
+            logger.debug("Movie List got fetched successfully: {}", movieList);
             return ResponseEntity.ok(movieList);
         } catch (NoSuchElementException ex) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (RuntimeException ex) {
+            // Handle the transient failure scenario
+            logger.error("Error fetching list details: {}", ex.getMessage());
+            throw ex;
         }
     }
 
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
+    @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
     @PostMapping("/tmdb/4/list")
-    public ResponseEntity<ResponseMessage> createList(
+    public CompletionStage<ResponseEntity<ResponseMessage>> createList(
             @RequestBody MovieList requestBody
     ) {
         // Implement logic to create a new list
         //return {"success":true,"status_code":1,"status_message":"Success.","id":8284604}
-        var movieList = movieListQueryService.add(requestBody);
-        ResponseMessage response = new ResponseWithId(true, "Success.", movieList.getId());
-        return ResponseEntity.ok(response);
+        logger.debug("Create a new List with : {}", requestBody);
+
+//        var movieList = movieListQueryService.add(requestBody);
+//        ResponseMessage response = new ResponseWithId(true, "Success.", movieList.getId());
+//        return ResponseEntity.ok(response);
+
+        return CompletableFuture.supplyAsync(() -> {
+            // Your existing logic here
+            var movieList = movieListQueryService.add(requestBody);
+            ResponseMessage response = new ResponseWithId(true, "Success.", movieList.getId());
+            return ResponseEntity.ok(response);
+        });
     }
 
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @DeleteMapping("/tmdb/4/list/{list_id}")
     public ResponseEntity<ResponseMessage> deleteList(
             @PathVariable("list_id") Long listId
     ) {
+        logger.debug("Delete List with ID : {}", listId);
+
         movieListQueryService.deleteItem(listId);
         // Implement logic to delete the list with ID listId
         ResponseMessage responseMessage = new DeleteListResponse(true, "The item/record was deleted successfully.");
         return ResponseEntity.ok(responseMessage);
     }
 
-
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @DeleteMapping("/tmdb/4/list/{list_id}/items")
     public ResponseEntity<ResponseWithResults> removeItemFromList(
             @PathVariable("list_id") int listId,
             @RequestBody MovieList requestBody
     ) {
+        logger.debug("Remove item: {} from list with ID : {}", requestBody, listId);
+
         var removedMovies = movieListQueryService.deleteMovie(requestBody);
         // Implement logic to remove a movie from the list with ID listId
         ResponseWithResults response = new ResponseWithResults(true, "Success.", Collections.singletonList(removedMovies));
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Function that is executed when all retries attempts have exhausted.
+     */
+    @SuppressWarnings("unused")
+    public ResponseEntity<String> retryFallback(Exception ex) {
+        logger.debug("retryFallback({})", ex.getMessage());
+        return new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    /**
+     * Function that is executed when circuit breaker is open.
+     */
+    @SuppressWarnings("unused")
+    public ResponseEntity<String> circuitBreakerFallback(CallNotPermittedException ex) {
+        // Note: Specific exception type is important! Else retry fallback will be always executed
+        // https://resilience4j.readme.io/docs/getting-started-3#fallback-methods
+        logger.debug("circuitBreakerFallback({})", ex.getMessage());
+        return new ResponseEntity<>("service is unavailable", HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    /**
+     * Function that is executed when Request timed out / time limiter is triggered
+     */
+    public CompletionStage<ResponseEntity<String>> timeLimiterFallback(TimeoutException ex) {
+        logger.debug("timeLimiterFallback({})", ex.getMessage());
+        return CompletableFuture.completedFuture(new ResponseEntity<>("Request timed out", HttpStatus.REQUEST_TIMEOUT));
+    }
+
+    /**
+     * Function that is executed when all retries attempts have exhausted.
+     */
+    @SuppressWarnings("unused")
+    public CompletionStage<ResponseEntity<String>> retryFallbackCompletion(Exception ex) {
+        logger.debug("retryFallback({})", ex.getMessage());
+        return CompletableFuture.completedFuture(new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE));
+    }
+
+    /**
+     * Function that is executed when circuit breaker is open.
+     */
+    @SuppressWarnings("unused")
+    public CompletionStage<ResponseEntity<String>> circuitBreakerFallbackCompletion(CallNotPermittedException ex) {
+        // Note: Specific exception type is important! Else retry fallback will be always executed
+        // https://resilience4j.readme.io/docs/getting-started-3#fallback-methods
+        logger.debug("circuitBreakerFallback({})", ex.getMessage());
+        return CompletableFuture.completedFuture(new ResponseEntity<>("service is unavailable", HttpStatus.SERVICE_UNAVAILABLE));
     }
 }
