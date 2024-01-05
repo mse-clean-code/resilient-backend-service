@@ -54,9 +54,9 @@ public class ProxyController {
     /**
      * Endpoint that proxies all tmdb image methods.
      */
-    @CircuitBreaker(name = ProxyResilience.PROXY_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
-    @RateLimiter(name = ProxyResilience.PROXY_RATE_LIMITER, fallbackMethod = "rateLimiterFallback")
-    @Retry(name = ProxyResilience.PROXY_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ProxyResilience.PROXY_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackImageApi")
+    @RateLimiter(name = ProxyResilience.PROXY_RATE_LIMITER, fallbackMethod = "rateLimiterFallbackImageApi")
+    @Retry(name = ProxyResilience.PROXY_RETRY, fallbackMethod = "retryFallbackImageApi")
     @GetMapping(value = "/image.tmdb/**", produces = "application/octet-stream")
     public void tmdbImage(
         HttpMethod method, HttpServletRequest request,
@@ -98,5 +98,31 @@ public class ProxyController {
     public ResponseEntity<String> retryFallback(Exception ex) {
         logger.debug("retryFallback({})", ex.getMessage());
         return new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    /**
+     * Function that is executed when circuit breaker is open.
+     */
+    @SuppressWarnings("unused")
+    public void circuitBreakerFallbackImageApi(CallNotPermittedException ex) {
+        // Note: Specific exception type is important! Else retry fallback will be always executed
+        // https://resilience4j.readme.io/docs/getting-started-3#fallback-methods
+        logger.debug("circuitBreakerFallback({})", ex.getMessage());
+    }
+
+    /**
+     * Function that is executed when circuit breaker is open.
+     */
+    @SuppressWarnings("unused")
+    public void rateLimiterFallbackImageApi(RequestNotPermitted ex) {
+        logger.debug("rateLimiterFallback({})", ex.getMessage());
+    }
+
+    /**
+     * Function that is executed when all retries attempts have exhausted.
+     */
+    @SuppressWarnings("unused")
+    public void retryFallbackImageApi(Exception ex) {
+        logger.debug("retryFallback({})", ex.getMessage());
     }
 }

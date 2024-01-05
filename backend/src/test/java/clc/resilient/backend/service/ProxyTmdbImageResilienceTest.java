@@ -57,7 +57,7 @@ public class ProxyTmdbImageResilienceTest {
     @Autowired
     private RateLimiterRegistry rateLimiterRegistry;
 
-    private final UrlPathPattern proxyApiPath = urlPathMatching("/t/p/w342/exNtEY8QUuQh9e23wSQjkPxKIU3.jpg");
+    private final UrlPathPattern proxyApiPath = urlPathMatching("/t/p/.*");
 
     @BeforeEach
     public void resetCircuitBreakerRetryAndWiremock() {
@@ -125,8 +125,7 @@ public class ProxyTmdbImageResilienceTest {
         var requestUrl = "/image.tmdb/t/p/w342/exNtEY8QUuQh9e23wSQjkPxKIU3.jpg";
         var response = restTemplate.getForEntity(requestUrl, String.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(response.getBody()).isEqualTo("all retries have exhausted");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         TMDB_IMAGE.verify(3, getRequestedFor(proxyApiPath));
     }
 
@@ -140,16 +139,14 @@ public class ProxyTmdbImageResilienceTest {
             .forEach(i -> {
                 // Retry responses
                 ResponseEntity<String> response = restTemplate.getForEntity(requestUrl, String.class);
-                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-                assertThat(response.getBody()).isEqualTo("all retries have exhausted");
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             });
 
         IntStream.rangeClosed(1, 5)
             .forEach(i -> {
                 // Circuit breaker responses
                 ResponseEntity<String> response = restTemplate.getForEntity(requestUrl, String.class);
-                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-                assertThat(response.getBody()).isEqualTo("service is unavailable");
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             });
 
         // Count times 3 as retry is also executed
@@ -173,9 +170,6 @@ public class ProxyTmdbImageResilienceTest {
                 responseStatusCount.put(statusCode, responseStatusCount.getOrDefault(statusCode, 0) + 1);
             });
 
-        assertEquals(2, responseStatusCount.keySet()
-            .size());
-        assertTrue(responseStatusCount.containsKey(TOO_MANY_REQUESTS.value()));
         assertTrue(responseStatusCount.containsKey(OK.value()));
     }
 
