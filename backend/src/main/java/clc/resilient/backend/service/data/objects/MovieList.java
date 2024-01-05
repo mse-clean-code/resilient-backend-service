@@ -5,7 +5,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.List;
+
+// TODO: Remove JsonProperty annotations!
 
 @Entity
 @Table(name = "movie_list")
@@ -13,6 +16,7 @@ import java.util.List;
 @Setter
 public class MovieList {
     @Id
+    @GeneratedValue
     private Long id;
     private String name;
     private String description;
@@ -22,7 +26,7 @@ public class MovieList {
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "movie_list_id")
-    private List<MovieRelation> items;
+    private List<MovieRelation> items = new ArrayList<>(0);
     @JsonProperty("number_of_items")
     private int numberOfItems;
     private String backdrop_path;

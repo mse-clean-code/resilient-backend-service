@@ -3,20 +3,24 @@ package clc.resilient.backend.service.controllers;
 import clc.resilient.backend.service.controllers.messages.*;
 import clc.resilient.backend.service.data.objects.MovieList;
 import clc.resilient.backend.service.data.services.MovieListQueryService;
+import clc.resilient.backend.service.list.ListMapper;
+import clc.resilient.backend.service.list.dtos.MovieListDTO;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
@@ -27,11 +31,19 @@ import java.util.concurrent.TimeoutException;
  * @author Kacper Urbaniec
  * @version 2023-12-23
  */
+
+// TODO: Add interface
+@Validated
 @RestController
 public class ListController {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    @Autowired
-    private MovieListQueryService movieListQueryService;
+    private final MovieListQueryService movieListQueryService;
+    private final ListMapper mapper;
+
+    public ListController(MovieListQueryService movieListQueryService, ListMapper mapper) {
+        this.movieListQueryService = movieListQueryService;
+        this.mapper = mapper;
+    }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
@@ -275,20 +287,16 @@ public class ListController {
     @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
     @PostMapping("/tmdb/4/list")
     public CompletionStage<ResponseEntity<ResponseMessage>> createList(
-            @RequestBody MovieList requestBody
+        @RequestBody @NotNull MovieListDTO createListDto
     ) {
-        // Implement logic to create a new list
-        //return {"success":true,"status_code":1,"status_message":"Success.","id":8284604}
-        logger.debug("Create a new List with : {}", requestBody);
-
-//        var movieList = movieListQueryService.add(requestBody);
-//        ResponseMessage response = new ResponseWithId(true, "Success.", movieList.getId());
-//        return ResponseEntity.ok(response);
-
+        logger.debug("createList({})", createListDto);
         return CompletableFuture.supplyAsync(() -> {
-            // Your existing logic here
-            var movieList = movieListQueryService.add(requestBody);
-            ResponseMessage response = new ResponseWithId(true, "Success.", movieList.getId());
+            var list = mapper.movieListToEntity(createListDto);
+            movieListQueryService.add(list);
+            var listDto = mapper.movieListToDto(list);
+            // TODO: Use builder pattern?
+            ResponseMessage response = new ResponseWithId(true, "Success.", listDto.getId());
+            response.setResults(Collections.singletonList(listDto));
             return ResponseEntity.ok(response);
         });
     }
@@ -345,6 +353,7 @@ public class ListController {
     /**
      * Function that is executed when Request timed out / time limiter is triggered
      */
+    @SuppressWarnings("unused")
     public CompletionStage<ResponseEntity<String>> timeLimiterFallback(TimeoutException ex) {
         logger.debug("timeLimiterFallback({})", ex.getMessage());
         return CompletableFuture.completedFuture(new ResponseEntity<>("Request timed out", HttpStatus.REQUEST_TIMEOUT));
