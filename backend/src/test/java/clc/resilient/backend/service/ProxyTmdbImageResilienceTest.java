@@ -57,7 +57,7 @@ public class ProxyTmdbImageResilienceTest {
     @Autowired
     private RateLimiterRegistry rateLimiterRegistry;
 
-    private final UrlPathPattern proxyApiPath = urlPathMatching("/t/p/.*");
+    private final UrlPathPattern proxyImagePath = urlPathMatching("/t/p/.*");
 
     @BeforeEach
     public void resetCircuitBreakerRetryAndWiremock() {
@@ -84,7 +84,7 @@ public class ProxyTmdbImageResilienceTest {
 
     @Test
     void testTmdbImage_Success() {
-        TMDB_IMAGE.stubFor(WireMock.get(proxyApiPath)
+        TMDB_IMAGE.stubFor(WireMock.get(proxyImagePath)
             .willReturn(ok()));
 
         var requestUrl = "/image.tmdb/t/p/w342/exNtEY8QUuQh9e23wSQjkPxKIU3.jpg";
@@ -98,12 +98,12 @@ public class ProxyTmdbImageResilienceTest {
         // Scenario: First external API request fails, but retry recover via second one!
         // Mock scenario with wiremock
         // https://stackoverflow.com/a/60006300/12347616
-        TMDB_IMAGE.stubFor(WireMock.get(proxyApiPath)
+        TMDB_IMAGE.stubFor(WireMock.get(proxyImagePath)
             .inScenario("Retry")
             .whenScenarioStateIs(STARTED)
             .willReturn(serverError())
             .willSetStateTo("First Retry"));
-        TMDB_IMAGE.stubFor(WireMock.get(proxyApiPath)
+        TMDB_IMAGE.stubFor(WireMock.get(proxyImagePath)
             .inScenario("Retry")
             .whenScenarioStateIs("First Retry")
             .willReturn(ok())
@@ -113,25 +113,26 @@ public class ProxyTmdbImageResilienceTest {
         var response = restTemplate.getForEntity(requestUrl, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        TMDB_IMAGE.verify(2, getRequestedFor(proxyApiPath));
+        TMDB_IMAGE.verify(2, getRequestedFor(proxyImagePath));
     }
 
     @Test
     void testTmdbImage_Retry_Failure() {
         // Scenario: All external requests fails and retry limit is exceeded
-        TMDB_IMAGE.stubFor(WireMock.get(proxyApiPath)
+        TMDB_IMAGE.stubFor(WireMock.get(proxyImagePath)
             .willReturn(serverError()));
 
         var requestUrl = "/image.tmdb/t/p/w342/exNtEY8QUuQh9e23wSQjkPxKIU3.jpg";
         var response = restTemplate.getForEntity(requestUrl, String.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        TMDB_IMAGE.verify(3, getRequestedFor(proxyApiPath));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.getBody()).isEqualTo("all retries have exhausted");
+        TMDB_IMAGE.verify(3, getRequestedFor(proxyImagePath));
     }
 
     @Test
     void testTmdbImage_CircuitBreaker() {
-        TMDB_IMAGE.stubFor(WireMock.get(proxyApiPath)
+        TMDB_IMAGE.stubFor(WireMock.get(proxyImagePath)
             .willReturn(serverError()));
 
         var requestUrl = "/image.tmdb/t/p/w342/exNtEY8QUuQh9e23wSQjkPxKIU3.jpg";
@@ -139,24 +140,26 @@ public class ProxyTmdbImageResilienceTest {
             .forEach(i -> {
                 // Retry responses
                 ResponseEntity<String> response = restTemplate.getForEntity(requestUrl, String.class);
-                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                assertThat(response.getBody()).isEqualTo("all retries have exhausted");
             });
 
         IntStream.rangeClosed(1, 5)
             .forEach(i -> {
                 // Circuit breaker responses
                 ResponseEntity<String> response = restTemplate.getForEntity(requestUrl, String.class);
-                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                assertThat(response.getBody()).isEqualTo("service is unavailable");
             });
 
         // Count times 3 as retry is also executed
-        TMDB_IMAGE.verify(3*5, getRequestedFor(proxyApiPath));
+        TMDB_IMAGE.verify(3*5, getRequestedFor(proxyImagePath));
     }
 
     @Test
     @Order(1) // This first needs to run always first, see explanation in `removeRateLimiter`
     void testTmdbImage_RateLimiter() {
-        TMDB_IMAGE.stubFor(WireMock.get(proxyApiPath)
+        TMDB_IMAGE.stubFor(WireMock.get(proxyImagePath)
             .willReturn(ok()));
 
         var requestUrl = "/image.tmdb/t/p/w342/exNtEY8QUuQh9e23wSQjkPxKIU3.jpg";
@@ -170,7 +173,11 @@ public class ProxyTmdbImageResilienceTest {
                 responseStatusCount.put(statusCode, responseStatusCount.getOrDefault(statusCode, 0) + 1);
             });
 
+        assertEquals(2, responseStatusCount.keySet()
+            .size());
+        assertTrue(responseStatusCount.containsKey(TOO_MANY_REQUESTS.value()));
         assertTrue(responseStatusCount.containsKey(OK.value()));
+        TMDB_IMAGE.verify(lessThan(150), getRequestedFor(proxyImagePath));
     }
 
 }

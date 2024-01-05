@@ -98,6 +98,12 @@ public class ProxyClient {
             // https://stackoverflow.com/a/52271541/12347616
             logger.error("tmdb is offline");
             throw new ApiOfflineException(ex);
+        } catch (RestClientException ex) {
+            logger.error("tmdb request failed");
+            throw new ApiRequestException(ex);
+        } catch (Exception ex) {
+            logger.error("unknown tmdb access exception");
+            throw new IllegalStateException("unknown exception", ex);
         }
     }
 

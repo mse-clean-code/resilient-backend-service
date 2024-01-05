@@ -18,6 +18,8 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 
+import java.io.IOException;
+
 /**
  * @author Kacper Urbaniec
  * @version 2023-12-22
@@ -54,9 +56,9 @@ public class ProxyController {
     /**
      * Endpoint that proxies all tmdb image methods.
      */
-    @CircuitBreaker(name = ProxyResilience.PROXY_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackImageApi")
-    @RateLimiter(name = ProxyResilience.PROXY_RATE_LIMITER, fallbackMethod = "rateLimiterFallbackImageApi")
-    @Retry(name = ProxyResilience.PROXY_RETRY, fallbackMethod = "retryFallbackImageApi")
+    @CircuitBreaker(name = ProxyResilience.PROXY_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
+    @RateLimiter(name = ProxyResilience.PROXY_RATE_LIMITER, fallbackMethod = "rateLimiterFallback")
+    @Retry(name = ProxyResilience.PROXY_RETRY, fallbackMethod = "retryFallback")
     @GetMapping(value = "/image.tmdb/**", produces = "application/octet-stream")
     public void tmdbImage(
         HttpMethod method, HttpServletRequest request,
@@ -71,6 +73,12 @@ public class ProxyController {
         client.fetchTmdbImage(method, path, request, body, response);
     }
 
+    //================================================================================
+    // Resilience4j Fallbacks
+    //================================================================================
+
+    //region tmdb api fallbacks
+
     /**
      * Function that is executed when circuit breaker is open.
      */
@@ -83,7 +91,7 @@ public class ProxyController {
     }
 
     /**
-     * Function that is executed when circuit breaker is open.
+     * Function that is executed when rate limit has been exceeded.
      */
     @SuppressWarnings("unused")
     public ResponseEntity<String> rateLimiterFallback(RequestNotPermitted ex) {
@@ -100,29 +108,51 @@ public class ProxyController {
         return new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE);
     }
 
-    /**
-     * Function that is executed when circuit breaker is open.
-     */
-    @SuppressWarnings("unused")
-    public void circuitBreakerFallbackImageApi(CallNotPermittedException ex) {
-        // Note: Specific exception type is important! Else retry fallback will be always executed
-        // https://resilience4j.readme.io/docs/getting-started-3#fallback-methods
-        logger.debug("circuitBreakerFallback({})", ex.getMessage());
-    }
+    //endregion
+
+    //region tmdb image fallbacks
 
     /**
      * Function that is executed when circuit breaker is open.
      */
     @SuppressWarnings("unused")
-    public void rateLimiterFallbackImageApi(RequestNotPermitted ex) {
+    public void circuitBreakerFallback(
+        HttpMethod method, HttpServletRequest request,
+        @RequestBody(required = false) String body, HttpServletResponse response,
+        CallNotPermittedException ex
+    ) throws IOException {
+        logger.debug("circuitBreakerFallback({})", ex.getMessage());
+        response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+        response.getWriter().write("service is unavailable");
+    }
+
+    /**
+     * Function that is executed when rate limit has been exceeded.
+     */
+    @SuppressWarnings("unused")
+    public void rateLimiterFallback(
+        HttpMethod method, HttpServletRequest request,
+        @RequestBody(required = false) String body, HttpServletResponse response,
+        RequestNotPermitted ex
+    ) throws IOException {
         logger.debug("rateLimiterFallback({})", ex.getMessage());
+        response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+        response.getWriter().write("too many requests");
     }
 
     /**
      * Function that is executed when all retries attempts have exhausted.
      */
     @SuppressWarnings("unused")
-    public void retryFallbackImageApi(Exception ex) {
+    public void retryFallback(
+        HttpMethod method, HttpServletRequest request,
+        @RequestBody(required = false) String body, HttpServletResponse response,
+        Exception ex
+    ) throws IOException {
         logger.debug("retryFallback({})", ex.getMessage());
+        response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+        response.getWriter().write("all retries have exhausted");
     }
+
+    //endregion
 }

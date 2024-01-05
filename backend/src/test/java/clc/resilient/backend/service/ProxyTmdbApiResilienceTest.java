@@ -177,6 +177,7 @@ public class ProxyTmdbApiResilienceTest {
             .size());
         assertTrue(responseStatusCount.containsKey(TOO_MANY_REQUESTS.value()));
         assertTrue(responseStatusCount.containsKey(OK.value()));
+        TMDB_API.verify(lessThan(150), getRequestedFor(proxyApiPath));
     }
 
 }
