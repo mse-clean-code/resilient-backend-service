@@ -3,7 +3,8 @@ package clc.resilient.backend.service.controllers;
 import clc.resilient.backend.service.controllers.messages.*;
 import clc.resilient.backend.service.data.objects.MovieList;
 import clc.resilient.backend.service.data.services.MovieListQueryService;
-import clc.resilient.backend.service.proxy.ProxyResilience;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,6 +30,7 @@ public class ListController {
     private MovieListQueryService movieListQueryService;
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @RequestMapping({"/tmdb/4/account/{account_id}/lists"})
     public ResponseEntity<ResponseOfMovieListsPaginated> accountLists(
             @RequestBody(required = false) String body,
@@ -95,6 +97,7 @@ public class ListController {
 
     // Add Movie to List
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @PostMapping("/tmdb/4/list/{list_id}/items")
     public ResponseEntity<ResponseMessage> addItemToList(
             @PathVariable("list_id") String listId,
@@ -128,6 +131,7 @@ public class ListController {
 
     // Add Movie to List
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @PutMapping("/tmdb/4/list/{list_id}")
     public ResponseEntity<ResponseMessage> updateItem(
             @PathVariable("list_id") String listId,
@@ -161,6 +165,7 @@ public class ListController {
 
     // Get List Details
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @GetMapping("/tmdb/4/list/{list_id}")
     public ResponseEntity<MovieList> getListDetails(
             @PathVariable("list_id") Long listId
@@ -257,6 +262,7 @@ public class ListController {
     }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @PostMapping("/tmdb/4/list")
     public ResponseEntity<ResponseMessage> createList(
             @RequestBody MovieList requestBody
@@ -271,6 +277,7 @@ public class ListController {
     }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @DeleteMapping("/tmdb/4/list/{list_id}")
     public ResponseEntity<ResponseMessage> deleteList(
             @PathVariable("list_id") Long listId
@@ -284,6 +291,7 @@ public class ListController {
     }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @DeleteMapping("/tmdb/4/list/{list_id}/items")
     public ResponseEntity<ResponseWithResults> removeItemFromList(
             @PathVariable("list_id") int listId,
@@ -304,5 +312,16 @@ public class ListController {
     public ResponseEntity<String> retryFallback(Exception ex) {
         logger.debug("retryFallback({})", ex.getMessage());
         return new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    /**
+     * Function that is executed when circuit breaker is open.
+     */
+    @SuppressWarnings("unused")
+    public ResponseEntity<String> circuitBreakerFallback(CallNotPermittedException ex) {
+        // Note: Specific exception type is important! Else retry fallback will be always executed
+        // https://resilience4j.readme.io/docs/getting-started-3#fallback-methods
+        logger.debug("circuitBreakerFallback({})", ex.getMessage());
+        return new ResponseEntity<>("service is unavailable", HttpStatus.SERVICE_UNAVAILABLE);
     }
 }
