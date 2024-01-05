@@ -35,7 +35,7 @@ import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("wiremock")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class ProxyControllerResilienceTest {
+public class ProxyTmdbApiResilienceTest {
 
     @RegisterExtension
     static WireMockExtension TMDB_API = WireMockExtension.newInstance()
