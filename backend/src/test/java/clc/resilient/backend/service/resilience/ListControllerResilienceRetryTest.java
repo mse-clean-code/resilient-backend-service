@@ -1,4 +1,4 @@
-package clc.resilient.backend.service;
+package clc.resilient.backend.service.resilience;
 
 import clc.resilient.backend.service.controllers.ListResilience;
 import clc.resilient.backend.service.controllers.messages.ResponseMessage;
@@ -17,6 +17,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("wiremock")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class ListControllerResilienceRetryTest {
 
     @Autowired

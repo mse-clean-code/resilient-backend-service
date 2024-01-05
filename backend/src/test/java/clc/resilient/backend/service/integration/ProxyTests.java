@@ -1,4 +1,4 @@
-package clc.resilient.backend.service;
+package clc.resilient.backend.service.integration;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

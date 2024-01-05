@@ -1,4 +1,4 @@
-package clc.resilient.backend.service;
+package clc.resilient.backend.service.resilience;
 
 import clc.resilient.backend.service.proxy.ProxyResilience;
 import com.github.tomakehurst.wiremock.client.WireMock;
