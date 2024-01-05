@@ -1,10 +1,12 @@
 package clc.resilient.backend.service;
 
+import clc.resilient.backend.service.controllers.ListResilience;
 import clc.resilient.backend.service.controllers.messages.ResponseMessage;
 import clc.resilient.backend.service.controllers.messages.ResponseWithResults;
 import clc.resilient.backend.service.data.objects.MovieList;
 import clc.resilient.backend.service.data.objects.MovieRelation;
 import clc.resilient.backend.service.data.services.MovieListQueryService;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,8 +38,18 @@ public class ListControllerResilienceRetryTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
+    @Autowired
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
     @MockBean
     private MovieListQueryService movieListQueryService;
+
+    @BeforeEach
+    public void resetCircuitBreakerRetryAndWiremock() {
+        var circuitBreaker = circuitBreakerRegistry
+                .circuitBreaker(ListResilience.LIST_CIRCUIT_BREAKER);
+        circuitBreaker.reset();
+    }
 
     @Test
     void testAccountLists_Success() {
