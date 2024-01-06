@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpMethod;
 import org.springframework.test.annotation.DirtiesContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,13 +50,39 @@ public class ListTests {
             .isPrivate(false)
             .build();
 
-        var response = restTemplate.postForObject(requestUrl, createRequest, ResponseMessage.class);
+        var response = restTemplate
+            .postForObject(requestUrl, createRequest, ResponseMessage.class);
 
         assertEquals(response.getSuccess(), true);
         var createdList = extractResult(response, MovieListDTO.class);
         assertEquals(createRequest.getDescription(), createdList.getDescription());
         assertEquals(createRequest.getName(), createdList.getName());
         assertEquals(createRequest.isPrivate(), createdList.isPrivate());
+        assertEquals(1, movieListRepository.count());
+    }
+
+    @Test
+    void delete_list() {
+        var listId = addList();
+        var requestUrl = "/tmdb/4/list/" + listId;
+
+        var response = restTemplate
+            .exchange(requestUrl, HttpMethod.DELETE, null, ResponseMessage.class)
+            .getBody();
+
+        assertEquals(response.getSuccess(), true);
+        assertEquals(0, movieListRepository.count());
+    }
+
+    private Long addList() {
+        var requestUrl = "/tmdb/4/list";
+        var createRequest = MovieListDTO.builder()
+            .description("Hey!")
+            .name("My Cool List")
+            .isPrivate(false)
+            .build();
+        var response = restTemplate.postForObject(requestUrl, createRequest, ResponseMessage.class);
+        return response.getId();
     }
 
     private <T> T extractResult(ResponseMessage response, Class<T> clazz) {

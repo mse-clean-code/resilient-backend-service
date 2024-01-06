@@ -5,8 +5,8 @@ import clc.resilient.backend.service.data.objects.MovieRelation;
 import clc.resilient.backend.service.data.repositories.MovieListRepository;
 import clc.resilient.backend.service.data.repositories.MovieRelationRepository;
 import clc.resilient.backend.service.list.validators.ListServiceValidation;
-import clc.resilient.backend.service.list.validators.MovieListValidator;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.groups.Default;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +43,7 @@ public class MovieListQueryService {
     // https://reflectoring.io/bean-validation-with-spring-boot/
     // Required so hibernate does not call the @MovieListConstraint!
     @Validated({ListServiceValidation.class, Default.class})
-    public MovieList add(@Valid MovieList addList) {
+    public MovieList addList(@Valid MovieList addList) {
         return movieListRepository.save(addList);
     }
 
@@ -93,6 +93,11 @@ public class MovieListQueryService {
         }
     }
 
+    @Transactional
+    public void deleteList(@NotNull Long id) {
+        movieListRepository.deleteById(id);
+    }
+
     public List<MovieRelation> deleteMovie(MovieList toDeleteMovie) {
         Optional<MovieList> optionalItem = movieListRepository.findById(toDeleteMovie.getId());
         if (optionalItem.isPresent()) {
@@ -108,12 +113,5 @@ public class MovieListQueryService {
             // You might want to throw an exception or handle it differently.
             return null;
         }
-    }
-
-    public void deleteItem(Long id) {
-        Optional<MovieList> optionalItem = movieListRepository.findById(id);
-        optionalItem.ifPresent(item -> {
-            movieListRepository.delete(item);
-        });
     }
 }

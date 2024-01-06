@@ -69,7 +69,7 @@ public class ListControllerResilienceTimeLimiterTest {
         expectedReturnMovieList.setItems(new ArrayList<>());
 
         // Simulate a delay that exceeds the time limit
-        when(movieListQueryService.add(any(MovieList.class))).thenAnswer(invocation -> {
+        when(movieListQueryService.addList(any(MovieList.class))).thenAnswer(invocation -> {
             Thread.sleep(5000); // Adjust this delay to be longer than your time limiter's configured timeout
             return Collections.emptyList();
         });

@@ -89,7 +89,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         expectedReturnMovieList.setItems(new ArrayList<>());
 
         // Simulate failure in the service method
-        when(movieListQueryService.add(any(MovieList.class)))
+        when(movieListQueryService.addList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Service failure"));
 
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
@@ -109,7 +109,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         });
 
         // Verify that the service method was called as expected
-        verify(movieListQueryService, times(5*5)).add(any(MovieList.class));
+        verify(movieListQueryService, times(5*5)).addList(any(MovieList.class));
     }
 
     @Test
@@ -121,7 +121,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         expectedReturnMovieList.setItems(new ArrayList<>());
 
         // Simulate failure in the service method
-        when(movieListQueryService.add(any(MovieList.class)))
+        when(movieListQueryService.addList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Service failure"));
 
         var requestUrl = "/tmdb/4/list/" + listId;
@@ -142,7 +142,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         });
 
         // Verify that the service method was called as expected
-        verify(movieListQueryService, times(5*5)).add(any(MovieList.class));
+        verify(movieListQueryService, times(5*5)).addList(any(MovieList.class));
     }
 
     @Test
@@ -179,7 +179,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         movieList.setItems(new ArrayList<>());
 
         // Simulate failure in the service method
-        when(movieListQueryService.add(any(MovieList.class)))
+        when(movieListQueryService.addList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Service failure"));
 
         var requestUrl = "/tmdb/4/list";
@@ -197,7 +197,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         });
 
         // Verify that the service method was called as expected
-        verify(movieListQueryService, times(5*5)).add(any(MovieList.class));
+        verify(movieListQueryService, times(5*5)).addList(any(MovieList.class));
     }
 
     void testCreateList_Retry_Failure() {
@@ -206,7 +206,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         expectedReturnMovieList.setId(null);
         expectedReturnMovieList.setItems(new ArrayList<>());
 
-        when(movieListQueryService.add(any(MovieList.class)))
+        when(movieListQueryService.addList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Persistent failure")); // All calls fail
 
         var requestUrl = "/tmdb/4/list";
@@ -220,7 +220,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         assertTrue(response.getBody().contains("all retries have exhausted"));
 
         // Verify that the service method was called as per the retry configuration
-        verify(movieListQueryService, times(5)).add(any(MovieList.class));
+        verify(movieListQueryService, times(5)).addList(any(MovieList.class));
     }
     @Test
     void testDeleteList_CircuitBreaker() {
@@ -229,9 +229,9 @@ public class ListControllerResilienceCircuitBreakerTest {
 
         // Simulate failure in the service method
         doThrow(new RuntimeException("Service failure"))
-                .when(movieListQueryService).deleteItem(listId); // All calls throw an exception
+                .when(movieListQueryService).deleteList(listId); // All calls throw an exception
 
-        var requestUrl = "/tmdb/4/list/" + listId;
+        var requestUrl = "/tmdb/4/" + listId;
         HttpEntity<?> requestEntity = new HttpEntity<>(null);
 
         // First 5 calls - Retry responses
@@ -249,7 +249,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         });
 
         // Verify that the service method was called as expected
-        verify(movieListQueryService, times(5*5)).deleteItem(listId);
+        verify(movieListQueryService, times(5*5)).deleteList(listId);
     }
 
     @Test

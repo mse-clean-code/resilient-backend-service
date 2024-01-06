@@ -20,7 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
@@ -127,7 +126,7 @@ public class ListController {
         // Implement logic to add a movie to the list with ID listId
         logger.debug("Add movie to list with ID: {}", listId);
 
-        var updatedList = movieListQueryService.add(movieList);
+        var updatedList = movieListQueryService.addList(movieList);
         if (updatedList == null) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ResponseWithResults(false, "Failed to add item to the list.", Collections.emptyList()));
@@ -161,7 +160,7 @@ public class ListController {
         // Implement logic to add a movie to the list with ID listId
         logger.debug("Update item with ID: {}", listId);
 
-        var updatedList = movieListQueryService.add(movieList);
+        var updatedList = movieListQueryService.addList(movieList);
         if (updatedList == null) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ResponseWithResults(false, "Failed to update item.", Collections.emptyList()));
@@ -284,7 +283,7 @@ public class ListController {
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
-    // @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
+    @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
     @PostMapping("/tmdb/4/list")
     public CompletionStage<ResponseEntity<ResponseMessage>> createList(
         @RequestBody @NotNull MovieListDTO createListDto
@@ -292,27 +291,32 @@ public class ListController {
         logger.debug("createList({})", createListDto);
         return CompletableFuture.supplyAsync(() -> {
             var list = mapper.movieListToEntity(createListDto);
-            list = movieListQueryService.add(list);
+            list = movieListQueryService.addList(list);
             var listDto = mapper.movieListToDto(list);
-            // TODO: Use builder pattern?
-            ResponseMessage response = new ResponseWithId(true, "Success.", listDto.getId());
-            response.setResults(Collections.singletonList(listDto));
+            var response = ResponseMessage.builder()
+                .success(true)
+                .statusMessage("The item/record was created successfully.")
+                .id(listDto.getId())
+                .results(Collections.singletonList(listDto))
+                .build();
             return ResponseEntity.ok(response);
         });
     }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
-    @DeleteMapping("/tmdb/4/list/{list_id}")
+    @DeleteMapping("/tmdb/4/{list_id}")
     public ResponseEntity<ResponseMessage> deleteList(
-            @PathVariable("list_id") Long listId
+        @PathVariable("list_id") @NotNull Long listId
     ) {
-        logger.debug("Delete List with ID : {}", listId);
-
-        movieListQueryService.deleteItem(listId);
-        // Implement logic to delete the list with ID listId
-        ResponseMessage responseMessage = new DeleteListResponse(true, "The item/record was deleted successfully.");
-        return ResponseEntity.ok(responseMessage);
+        logger.debug("deleteList({})", listId);
+        movieListQueryService.deleteList(listId);
+        var response = ResponseMessage.builder()
+            .success(true)
+            .statusMessage("The item/record was deleted successfully.")
+            .id(listId)
+            .build();
+        return ResponseEntity.ok(response);
     }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
