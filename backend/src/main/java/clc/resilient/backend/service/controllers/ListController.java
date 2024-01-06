@@ -4,6 +4,7 @@ import clc.resilient.backend.service.controllers.messages.*;
 import clc.resilient.backend.service.data.objects.MovieList;
 import clc.resilient.backend.service.data.services.MovieListQueryService;
 import clc.resilient.backend.service.list.ListMapper;
+import clc.resilient.backend.service.list.dtos.MediaItemsDTO;
 import clc.resilient.backend.service.list.dtos.MovieListDTO;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -75,7 +76,6 @@ public class ListController {
         @PathVariable("list_id") @NotNull String listId,
         @RequestBody @NotNull MovieListDTO updateListDto
     ) {
-        // Implement logic to add a movie to the list with ID listId
         logger.debug("updateList({}, {})", listId, updateListDto);
         var list = mapper.movieListToEntity(updateListDto);
         list = movieListQueryService.updateList(list);
@@ -188,13 +188,14 @@ public class ListController {
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @PostMapping("/tmdb/4/list/{list_id}/items")
     public ResponseEntity<ResponseMessage> addItemToList(
-            @PathVariable("list_id") String listId,
-            @RequestBody MovieList movieList
+        @PathVariable("list_id") Long listId,
+        @RequestBody MediaItemsDTO itemsDto
     ) {
         // Implement logic to add a movie to the list with ID listId
         logger.debug("Add movie to list with ID: {}", listId);
 
-        var updatedList = movieListQueryService.createList(movieList);
+        var items = mapper.mediaItemToEntity(itemsDto.getItems());
+        var updatedList = movieListQueryService.addItemsToList(listId, items);
         if (updatedList == null) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ResponseWithResults(false, "Failed to add item to the list.", Collections.emptyList()));

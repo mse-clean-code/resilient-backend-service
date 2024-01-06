@@ -5,31 +5,38 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
+// TODO: Rename to MediaRelation?
+
 @Entity
 @Table(name = "movie_relation")
 @Getter
 @Setter
 public class MovieRelation {
     @Id
-    Long media_id;
-    String media_type;
+    Long mediaId;
+    String mediaType;
 
     @ManyToOne
     @JoinColumn(name = "movie_list_id")
     @JsonIgnore
     private MovieList movieList;
 
+    @Transient
+    Map<String, Object> apiData = new HashMap<>(0);
+
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true; // If it's the same instance, return true
-        }
-        if (obj == null || getClass() != obj.getClass()) {
-            return false; // If the object is null or of a different class, return false
-        }
-        // Cast the object to the appropriate type
-        MovieRelation otherMovie = (MovieRelation) obj;
-        // Compare the movie_id attribute
-        return this.getMedia_id().equals(otherMovie.getMedia_id());
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof MovieRelation that)) return false;
+        return Objects.equals(mediaId, that.mediaId) && Objects.equals(mediaType, that.mediaType);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(mediaId, mediaType);
     }
 }

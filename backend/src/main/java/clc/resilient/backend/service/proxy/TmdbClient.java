@@ -28,14 +28,14 @@ import java.util.Objects;
  * @version 2023-12-23
  */
 @Component
-public class ProxyClient {
+public class TmdbClient {
     private final URI apiUri;
     private final String apiReadAccessKey;
     private final URI imageUri;
     private final RestTemplate restTemplate = new RestTemplate();
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    ProxyClient(
+    public TmdbClient(
         @Value("${tmdb.api.uri}") String apiUri,
         @Value("${tmdb.api.read-access-key}") String apiReadAccessKey,
         @Value("${tmdb.image.uri}") String imageUri

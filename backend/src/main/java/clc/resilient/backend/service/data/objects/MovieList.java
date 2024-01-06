@@ -13,7 +13,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 // TODO: Remove JsonProperty annotations!
 
@@ -38,7 +40,7 @@ public class MovieList {
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "movie_list_id")
-    private List<MovieRelation> items = new ArrayList<>(0);
+    private Set<MovieRelation> items = new HashSet<>(0);
     @JsonProperty("number_of_items")
     private int numberOfItems;
     private String backdrop_path;
@@ -46,4 +48,6 @@ public class MovieList {
     public int getNumberOfItems() {
         return items.size();
     }
+
+
 }

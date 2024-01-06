@@ -6,15 +6,24 @@ import clc.resilient.backend.service.data.repositories.MovieListRepository;
 import clc.resilient.backend.service.data.repositories.MovieRelationRepository;
 import clc.resilient.backend.service.list.validators.groups.CreateListValidation;
 import clc.resilient.backend.service.list.validators.groups.UpdateListValidation;
+import clc.resilient.backend.service.proxy.SimpleHttpServletRequest;
+import clc.resilient.backend.service.proxy.TmdbClient;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Validated
@@ -23,9 +32,17 @@ public class MovieListQueryService {
 
     private final MovieRelationRepository movieRelationRepository;
 
-    public MovieListQueryService(MovieListRepository movieListRepository, MovieRelationRepository movieRelationRepository) {
+    private final TmdbClient tmdbClient;
+
+    private final ObjectMapper objectMapper;
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    public MovieListQueryService(MovieListRepository movieListRepository, MovieRelationRepository movieRelationRepository, TmdbClient tmdbClient, ObjectMapper objectMapper) {
         this.movieListRepository = movieListRepository;
         this.movieRelationRepository = movieRelationRepository;
+        this.tmdbClient = tmdbClient;
+        this.objectMapper = objectMapper;
     }
 
     public List<MovieList> getAll() {
@@ -105,12 +122,28 @@ public class MovieListQueryService {
         movieListRepository.deleteById(id);
     }
 
-    public List<MovieRelation> deleteMovie(MovieList toDeleteMovie) {
+    @Transactional
+    public MovieList addItemsToList(@NotNull Long id, List<MovieRelation> mediaItems) {
+        // TODO: Validate added items if really exist
+        // TODO: Exception handling
+        var list = movieListRepository.findById(id).orElseThrow();
+        list.getItems().addAll(mediaItems);
+
+        // Fetch media item data from API
+        for (MovieRelation mediaItem : list.getItems()) {
+            fetchTmdbItem(mediaItem);
+        }
+
+        return list;
+    }
+
+
+    public Set<MovieRelation> deleteMovie(MovieList toDeleteMovie) {
         Optional<MovieList> optionalItem = movieListRepository.findById(toDeleteMovie.getId());
         if (optionalItem.isPresent()) {
             MovieList item = optionalItem.get();
-            List<MovieRelation> toDeleteMovies = toDeleteMovie.getItems();
-            List<MovieRelation> movies = item.getItems();
+            Set<MovieRelation> toDeleteMovies = toDeleteMovie.getItems();
+            Set<MovieRelation> movies = item.getItems();
             movies.removeAll(toDeleteMovies);
             item.setItems(movies);
             movieListRepository.saveAndFlush(item);
@@ -119,6 +152,26 @@ public class MovieListQueryService {
             // Handle scenario where the item with the provided ID is not found.
             // You might want to throw an exception or handle it differently.
             return null;
+        }
+    }
+
+    private void fetchTmdbItem(MovieRelation item) {
+        var id = item.getMediaId();
+        var mediaType = item.getMediaType();
+
+        String requestUrl;
+        if (mediaType.equals("movie")) requestUrl = "/3/movie/" + id;
+        else requestUrl = "/3/tv/" + id;
+
+        var response = tmdbClient
+            .fetchTmdbApi(HttpMethod.GET, requestUrl, new SimpleHttpServletRequest(), null);
+        var json = response.getBody();
+
+        try {
+            var data = (Map<String, Object>) objectMapper.readValue(json, Map.class);
+            item.setApiData(data);
+        } catch (JsonProcessingException ex) {
+            logger.error(ex.getMessage());
         }
     }
 }

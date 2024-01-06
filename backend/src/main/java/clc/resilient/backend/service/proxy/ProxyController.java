@@ -26,10 +26,10 @@ import java.io.IOException;
  */
 @RestController
 public class ProxyController {
-    private final ProxyClient client;
+    private final TmdbClient client;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public ProxyController(@Autowired ProxyClient client) {
+    public ProxyController(@Autowired TmdbClient client) {
         this.client = client;
     }
 
