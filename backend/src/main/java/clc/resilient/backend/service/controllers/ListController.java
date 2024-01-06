@@ -281,10 +281,6 @@ public class ListController {
         //return {"success":true,"status_code":1,"status_message":"Success.","id":8284604}
         logger.debug("Create a new List with : {}", requestBody);
 
-//        var movieList = movieListQueryService.add(requestBody);
-//        ResponseMessage response = new ResponseWithId(true, "Success.", movieList.getId());
-//        return ResponseEntity.ok(response);
-
         return CompletableFuture.supplyAsync(() -> {
             // Your existing logic here
             var movieList = movieListQueryService.add(requestBody);
