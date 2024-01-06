@@ -34,8 +34,6 @@ public class ProxyController {
         this.client = client;
     }
 
-    // TODO: Error handling for proxy exceptions!
-
     /**
      * Endpoint that proxies all tmdb methods besides list functionality.
      */

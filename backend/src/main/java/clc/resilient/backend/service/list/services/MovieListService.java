@@ -19,11 +19,11 @@ public interface MovieListService {
 
     MovieList createList(@Valid MovieList addList);
 
-    MovieList updateList(MovieList updateList);
+    MovieList updateList(@Valid MovieList updateList);
 
     void deleteList(@NotNull Long id);
 
-    MovieList addItemsToList(@NotNull Long id, @NotNull Set<MediaRelation> mediaItems);
+    MovieList addItemsToList(@NotNull Long id, @Valid @NotNull Set<MediaRelation> mediaItems);
 
     MovieList removeItemsFromList(@NotNull Long id, @NotNull Set<MediaRelation> mediaItems);
 }

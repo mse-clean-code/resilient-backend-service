@@ -26,7 +26,6 @@ import java.util.concurrent.TimeoutException;
  * @version 2023-12-23
  */
 
-// TODO: Add interface
 @Validated
 @RestController
 public class ListController {

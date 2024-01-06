@@ -1,26 +1,22 @@
 package clc.resilient.backend.service.list.entities;
 
-import clc.resilient.backend.service.list.validators.MovieListConstraint;
 import clc.resilient.backend.service.list.validators.groups.CreateListValidation;
-import clc.resilient.backend.service.list.validators.groups.ListServiceValidation;
 import clc.resilient.backend.service.list.validators.groups.UpdateListValidation;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
+import jakarta.validation.groups.Default;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.HashSet;
 import java.util.Set;
 
-// TODO: Remove JsonProperty annotations!
-
 @Entity
 @Table(name = "movie_list")
 @Getter
 @Setter
-@MovieListConstraint(groups = ListServiceValidation.class)
 public class MovieList {
     @Id
     @GeneratedValue
@@ -28,8 +24,8 @@ public class MovieList {
     @NotNull(groups = UpdateListValidation.class)
     private Long id;
 
-    @NotNull
-    @NotEmpty
+    @NotNull(groups = {CreateListValidation.class, Default.class})
+    @NotEmpty(groups = {CreateListValidation.class, Default.class})
     private String name;
     private String description;
     private String iso6391;

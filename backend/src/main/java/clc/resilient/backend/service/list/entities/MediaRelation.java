@@ -1,5 +1,7 @@
 package clc.resilient.backend.service.list.entities;
 
+import clc.resilient.backend.service.list.validators.MediaRelationExists;
+import clc.resilient.backend.service.list.validators.groups.ListServiceValidation;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,12 +10,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-// TODO: Rename to MediaRelation?
-
 @Entity
 @Table(name = "movie_relation")
 @Getter
 @Setter
+@MediaRelationExists(groups = ListServiceValidation.class)
 public class MediaRelation {
     @Id
     @GeneratedValue

@@ -10,11 +10,11 @@ import java.lang.annotation.*;
  * @version 2024-01-06
  */
 @Documented
-@Constraint(validatedBy = MovieListValidator.class)
+@Constraint(validatedBy = MediaRelationExistsValidator.class)
 @Target( { ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
-public @interface MovieListConstraint {
-    String message() default "Invalid movie listt";
+public @interface MediaRelationExists {
+    String message() default "No such movie/tv";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }

@@ -6,6 +6,8 @@ import clc.resilient.backend.service.list.repositories.MovieListRepository;
 import clc.resilient.backend.service.list.validators.groups.CreateListValidation;
 import clc.resilient.backend.service.common.SimpleHttpServletRequest;
 import clc.resilient.backend.service.common.TmdbClient;
+import clc.resilient.backend.service.list.validators.groups.ListServiceValidation;
+import clc.resilient.backend.service.list.validators.groups.UpdateListValidation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
@@ -63,9 +65,8 @@ public class DefaultMovieListService implements MovieListService {
 
     @Override
     @Transactional
-    // @Validated({UpdateListValidation.class})
-    // public MovieList updateList(@Valid MovieList updateList) {
-    public MovieList updateList(MovieList updateList) {
+    @Validated({UpdateListValidation.class})
+    public MovieList updateList(@Valid MovieList updateList) {
         logger.debug("updateList({})", updateList);
         // TODO: Exception Handling
         var updateReference = movieListRepository.getReferenceById(updateList.getId());
@@ -89,12 +90,12 @@ public class DefaultMovieListService implements MovieListService {
 
     @Override
     @Transactional
+    @Validated({ListServiceValidation.class})
     public MovieList addItemsToList(
         @NotNull Long id,
-        @NotNull Set<MediaRelation> mediaItems
+        @NotNull @Valid Set<MediaRelation> mediaItems
     ) {
         logger.debug("addItemsToList({}, {})", id, mediaItems);
-        // TODO: Validate added items if really exist
         return modifyItemsInList(id, mediaItems, Set::addAll);
     }
 

@@ -28,6 +28,8 @@ public class ListValidatorTest {
         assertThrows(ConstraintViolationException.class, () -> {
             service.createList(list);
         });
+
+        // TODO: Check exception message?
     }
 
     @Test
@@ -59,4 +61,6 @@ public class ListValidatorTest {
             service.updateList(list);
         });
     }
+
+    // TODO: MediaRelationExists & other Test!
 }
