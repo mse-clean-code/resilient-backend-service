@@ -1,4 +1,4 @@
-package clc.resilient.backend.service.proxy.exceptions;
+package clc.resilient.backend.service.common.exceptions;
 
 /**
  * @author Kacper Urbaniec

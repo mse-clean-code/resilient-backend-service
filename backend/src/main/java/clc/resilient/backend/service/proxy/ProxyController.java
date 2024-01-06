@@ -1,5 +1,6 @@
 package clc.resilient.backend.service.proxy;
 
+import clc.resilient.backend.service.common.TmdbClient;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import jakarta.servlet.http.HttpServletRequest;
@@ -88,7 +89,7 @@ public class ProxyController {
     public ResponseEntity<String> circuitBreakerFallback(CallNotPermittedException ex) {
         // Note: Specific exception type is important! Else retry fallback will be always executed
         // https://resilience4j.readme.io/docs/getting-started-3#fallback-methods
-        logger.debug("circuitBreakerFallback({})", ex.getMessage());
+        logger.warn("circuitBreakerFallback", ex);
         return new ResponseEntity<>("service is unavailable", HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -97,7 +98,7 @@ public class ProxyController {
      */
     @SuppressWarnings("unused")
     public ResponseEntity<String> rateLimiterFallback(RequestNotPermitted ex) {
-        logger.debug("rateLimiterFallback({})", ex.getMessage());
+        logger.warn("rateLimiterFallback", ex);
         return new ResponseEntity<>("too many requests", HttpStatus.TOO_MANY_REQUESTS);
     }
 
@@ -106,7 +107,7 @@ public class ProxyController {
      */
     @SuppressWarnings("unused")
     public ResponseEntity<String> retryFallback(Exception ex) {
-        logger.debug("retryFallback({})", ex.getMessage());
+        logger.warn("retryFallback", ex);
         return new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -123,7 +124,7 @@ public class ProxyController {
         @RequestBody(required = false) String body, HttpServletResponse response,
         CallNotPermittedException ex
     ) throws IOException {
-        logger.debug("circuitBreakerFallback({})", ex.getMessage());
+        logger.warn("circuitBreakerFallback", ex);
         response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
         response.getWriter().write("service is unavailable");
     }
@@ -137,7 +138,7 @@ public class ProxyController {
         @RequestBody(required = false) String body, HttpServletResponse response,
         RequestNotPermitted ex
     ) throws IOException {
-        logger.debug("rateLimiterFallback({})", ex.getMessage());
+        logger.warn("rateLimiterFallback", ex);
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.getWriter().write("too many requests");
     }
@@ -151,7 +152,7 @@ public class ProxyController {
         @RequestBody(required = false) String body, HttpServletResponse response,
         Exception ex
     ) throws IOException {
-        logger.debug("retryFallback({})", ex.getMessage());
+        logger.warn("retryFallback", ex);
         response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
         response.getWriter().write("all retries have exhausted");
     }

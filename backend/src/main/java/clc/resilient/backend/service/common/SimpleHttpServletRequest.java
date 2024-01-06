@@ -1,4 +1,4 @@
-package clc.resilient.backend.service.proxy;
+package clc.resilient.backend.service.common;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
@@ -10,6 +10,8 @@ import java.security.Principal;
 import java.util.*;
 
 /**
+ * Simple {@link HttpServletRequest} mock class.
+ * For use with {@link TmdbClient}.
  * @author Kacper Urbaniec
  * @version 2024-01-06
  */

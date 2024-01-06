@@ -1,7 +1,7 @@
-package clc.resilient.backend.service.proxy;
+package clc.resilient.backend.service.common;
 
-import clc.resilient.backend.service.proxy.exceptions.ApiOfflineException;
-import clc.resilient.backend.service.proxy.exceptions.ApiRequestException;
+import clc.resilient.backend.service.common.exceptions.ApiOfflineException;
+import clc.resilient.backend.service.common.exceptions.ApiRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;

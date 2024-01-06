@@ -1,7 +1,7 @@
 package clc.resilient.backend.service.unit;
 
-import clc.resilient.backend.service.data.objects.MovieList;
-import clc.resilient.backend.service.data.services.MovieListQueryService;
+import clc.resilient.backend.service.list.entities.MovieList;
+import clc.resilient.backend.service.list.service.MovieListQueryService;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

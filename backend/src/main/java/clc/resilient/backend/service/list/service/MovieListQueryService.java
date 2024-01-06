@@ -1,38 +1,29 @@
-package clc.resilient.backend.service.data.services;
+package clc.resilient.backend.service.list.service;
 
-import clc.resilient.backend.service.data.objects.MovieList;
-import clc.resilient.backend.service.data.objects.MovieRelation;
-import clc.resilient.backend.service.data.repositories.MovieListRepository;
-import clc.resilient.backend.service.data.repositories.MovieRelationRepository;
+import clc.resilient.backend.service.list.entities.MediaRelation;
+import clc.resilient.backend.service.list.entities.MovieList;
+import clc.resilient.backend.service.list.repositories.MovieListRepository;
 import clc.resilient.backend.service.list.validators.groups.CreateListValidation;
-import clc.resilient.backend.service.list.validators.groups.UpdateListValidation;
-import clc.resilient.backend.service.proxy.SimpleHttpServletRequest;
-import clc.resilient.backend.service.proxy.TmdbClient;
-import com.fasterxml.jackson.core.JsonParseException;
+import clc.resilient.backend.service.common.SimpleHttpServletRequest;
+import clc.resilient.backend.service.common.TmdbClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 @Service
 @Validated
 public class MovieListQueryService {
     private final MovieListRepository movieListRepository;
-
-    private final MovieRelationRepository movieRelationRepository;
 
     private final TmdbClient tmdbClient;
 
@@ -40,9 +31,8 @@ public class MovieListQueryService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public MovieListQueryService(MovieListRepository movieListRepository, MovieRelationRepository movieRelationRepository, TmdbClient tmdbClient, ObjectMapper objectMapper) {
+    public MovieListQueryService(MovieListRepository movieListRepository, TmdbClient tmdbClient, ObjectMapper objectMapper) {
         this.movieListRepository = movieListRepository;
-        this.movieRelationRepository = movieRelationRepository;
         this.tmdbClient = tmdbClient;
         this.objectMapper = objectMapper;
     }
@@ -92,19 +82,19 @@ public class MovieListQueryService {
 
 
     @Transactional
-    public MovieList addItemsToList(@NotNull Long id, Set<MovieRelation> mediaItems) {
+    public MovieList addItemsToList(@NotNull Long id, Set<MediaRelation> mediaItems) {
         // TODO: Validate added items if really exist
         return modifyItemsInList(id, mediaItems, Set::addAll);
     }
 
     @Transactional
-    public MovieList removeItemsFromList(@NotNull Long id, Set<MovieRelation> mediaItems) {
+    public MovieList removeItemsFromList(@NotNull Long id, Set<MediaRelation> mediaItems) {
         return modifyItemsInList(id, mediaItems, Set::removeAll);
     }
 
     private MovieList modifyItemsInList(
-        @NotNull Long id, Set<MovieRelation> mediaItems,
-        BiConsumer<Set<MovieRelation>, Set<MovieRelation>> operation
+        @NotNull Long id, Set<MediaRelation> mediaItems,
+        BiConsumer<Set<MediaRelation>, Set<MediaRelation>> operation
     ) {
         // TODO: Exception handling
         var list = movieListRepository.findById(id).orElseThrow();
@@ -114,12 +104,12 @@ public class MovieListQueryService {
         return list;
     }
 
-    public Set<MovieRelation> deleteMovie(MovieList toDeleteMovie) {
+    public Set<MediaRelation> deleteMovie(MovieList toDeleteMovie) {
         Optional<MovieList> optionalItem = movieListRepository.findById(toDeleteMovie.getId());
         if (optionalItem.isPresent()) {
             MovieList item = optionalItem.get();
-            Set<MovieRelation> toDeleteMovies = toDeleteMovie.getItems();
-            Set<MovieRelation> movies = item.getItems();
+            Set<MediaRelation> toDeleteMovies = toDeleteMovie.getItems();
+            Set<MediaRelation> movies = item.getItems();
             movies.removeAll(toDeleteMovies);
             item.setItems(movies);
             movieListRepository.saveAndFlush(item);
@@ -132,12 +122,12 @@ public class MovieListQueryService {
     }
 
     private void fetchTmdbItems(@NotNull MovieList list) {
-        for (MovieRelation mediaItem : list.getItems()) {
+        for (MediaRelation mediaItem : list.getItems()) {
             fetchTmdbItem(mediaItem);
         }
     }
 
-    private void fetchTmdbItem(@NotNull MovieRelation item) {
+    private void fetchTmdbItem(@NotNull MediaRelation item) {
         var id = item.getMediaId();
         var mediaType = item.getMediaType();
 
@@ -154,7 +144,7 @@ public class MovieListQueryService {
             var data = (Map<String, Object>) objectMapper.readValue(json, Map.class);
             item.setApiData(data);
         } catch (JsonProcessingException ex) {
-            logger.error(ex.getMessage());
+            logger.warn("fetchTmdbItem", ex);
         }
     }
 }

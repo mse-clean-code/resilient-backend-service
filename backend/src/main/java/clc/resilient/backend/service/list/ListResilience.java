@@ -1,4 +1,4 @@
-package clc.resilient.backend.service.controllers;
+package clc.resilient.backend.service.list;
 
 public class ListResilience {
     // Names must match the config in `application.properties`

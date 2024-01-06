@@ -1,8 +1,8 @@
 package clc.resilient.backend.service.resilience;
 
-import clc.resilient.backend.service.controllers.ListResilience;
-import clc.resilient.backend.service.data.objects.MovieList;
-import clc.resilient.backend.service.data.services.MovieListQueryService;
+import clc.resilient.backend.service.list.ListResilience;
+import clc.resilient.backend.service.list.entities.MovieList;
+import clc.resilient.backend.service.list.service.MovieListQueryService;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -21,7 +21,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.stream.IntStream;
 

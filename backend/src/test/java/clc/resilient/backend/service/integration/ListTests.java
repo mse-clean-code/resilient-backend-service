@@ -1,9 +1,9 @@
 package clc.resilient.backend.service.integration;
 
-import clc.resilient.backend.service.controllers.messages.ResponseMessage;
-import clc.resilient.backend.service.controllers.messages.ResponseOfMovieListsPaginated;
-import clc.resilient.backend.service.data.repositories.MovieListRepository;
-import clc.resilient.backend.service.data.repositories.MovieRelationRepository;
+import clc.resilient.backend.service.list.dtos.ResponseDTO;
+import clc.resilient.backend.service.list.dtos.PaginatedResponseDTO;
+import clc.resilient.backend.service.list.repositories.MovieListRepository;
+import clc.resilient.backend.service.list.repositories.MediaRelationRepository;
 import clc.resilient.backend.service.list.dtos.MediaItemDTO;
 import clc.resilient.backend.service.list.dtos.MediaItemsDTO;
 import clc.resilient.backend.service.list.dtos.MovieListDTO;
@@ -36,7 +36,7 @@ public class ListTests {
     private MovieListRepository movieListRepository;
 
     @Autowired
-    private MovieRelationRepository movieRelationRepository;
+    private MediaRelationRepository movieRelationRepository;
 
     @Autowired
     private ObjectMapper mapper;
@@ -55,7 +55,7 @@ public class ListTests {
         var requestUrl = "/tmdb/4/account/0/lists";
 
         var response = restTemplate
-            .getForObject(requestUrl, ResponseOfMovieListsPaginated.class);
+            .getForObject(requestUrl, PaginatedResponseDTO.class);
 
         assertEquals(1,  response.getPage());
         assertEquals(1,  response.getTotalPages());
@@ -88,7 +88,7 @@ public class ListTests {
             .build();
 
         var response = restTemplate
-            .postForObject(requestUrl, createRequest, ResponseMessage.class);
+            .postForObject(requestUrl, createRequest, ResponseDTO.class);
 
         assertEquals(response.getSuccess(), true);
 
@@ -112,7 +112,7 @@ public class ListTests {
             .build();
 
         var response = restTemplate
-            .exchange(requestUrl, HttpMethod.PUT, new HttpEntity<>(updateRequest), ResponseMessage.class)
+            .exchange(requestUrl, HttpMethod.PUT, new HttpEntity<>(updateRequest), ResponseDTO.class)
             .getBody();
 
         assertNotNull(response);
@@ -131,7 +131,7 @@ public class ListTests {
         var requestUrl = "/tmdb/4/" + listId;
 
         var response = restTemplate
-            .exchange(requestUrl, HttpMethod.DELETE, null, ResponseMessage.class)
+            .exchange(requestUrl, HttpMethod.DELETE, null, ResponseDTO.class)
             .getBody();
 
         assertNotNull(response);
@@ -152,7 +152,7 @@ public class ListTests {
         ));
 
         var response = restTemplate
-            .postForObject(requestUrl, addRequest, ResponseMessage.class);
+            .postForObject(requestUrl, addRequest, ResponseDTO.class);
 
         assertTrue(response.getSuccess());
         var list = response.getMovieListDTO();
@@ -175,7 +175,7 @@ public class ListTests {
         ));
 
         var response = restTemplate
-            .exchange(requestUrl, HttpMethod.DELETE, new HttpEntity<>(removeRequest), ResponseMessage.class)
+            .exchange(requestUrl, HttpMethod.DELETE, new HttpEntity<>(removeRequest), ResponseDTO.class)
             .getBody();
 
         assertNotNull(response);
@@ -204,7 +204,7 @@ public class ListTests {
             .visible(false)
             .build();
         var response = restTemplate
-            .postForObject(requestUrl, createRequest, ResponseMessage.class);
+            .postForObject(requestUrl, createRequest, ResponseDTO.class);
         var listId = response.getId();
 
         if (!withItems)
@@ -219,7 +219,7 @@ public class ListTests {
         ));
 
         response = restTemplate
-            .postForObject(requestUrl, addRequest, ResponseMessage.class);
+            .postForObject(requestUrl, addRequest, ResponseDTO.class);
 
         return new AddListResult(listId, response.getMovieListDTO());
     }

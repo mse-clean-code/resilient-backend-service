@@ -1,4 +1,4 @@
-package clc.resilient.backend.service.controllers.messages;
+package clc.resilient.backend.service.list.dtos;
 
 import clc.resilient.backend.service.list.dtos.MovieListDTO;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -11,7 +11,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ResponseMessage {
+public class ResponseDTO {
     Boolean success;
 
     @JsonProperty("status_code")

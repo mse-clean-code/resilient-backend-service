@@ -1,4 +1,4 @@
-package clc.resilient.backend.service.controllers.messages;
+package clc.resilient.backend.service.list.dtos;
 
 import clc.resilient.backend.service.list.dtos.MovieListDTO;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -11,7 +11,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ResponseOfMovieListsPaginated {
+public class PaginatedResponseDTO {
     Integer page;
     @JsonProperty("total_pages")
     Integer totalPages;

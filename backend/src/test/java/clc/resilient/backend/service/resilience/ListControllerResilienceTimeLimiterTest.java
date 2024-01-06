@@ -1,7 +1,7 @@
 package clc.resilient.backend.service.resilience;
 
-import clc.resilient.backend.service.data.objects.MovieList;
-import clc.resilient.backend.service.data.services.MovieListQueryService;
+import clc.resilient.backend.service.list.entities.MovieList;
+import clc.resilient.backend.service.list.service.MovieListQueryService;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
@@ -16,7 +16,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 

@@ -1,7 +1,7 @@
 package clc.resilient.backend.service.list;
 
-import clc.resilient.backend.service.data.objects.MovieList;
-import clc.resilient.backend.service.data.objects.MovieRelation;
+import clc.resilient.backend.service.list.entities.MediaRelation;
+import clc.resilient.backend.service.list.entities.MovieList;
 import clc.resilient.backend.service.list.dtos.MediaItemDTO;
 import clc.resilient.backend.service.list.dtos.MovieListDTO;
 import org.mapstruct.Mapper;
@@ -28,12 +28,12 @@ public interface ListMapper {
 
     @Mapping(target = "movieList", ignore = true)
     @Mapping(target = "id", ignore = true)
-    MovieRelation mediaItemToEntity(MediaItemDTO dto);
+    MediaRelation mediaItemToEntity(MediaItemDTO dto);
 
-    Set<MovieRelation> mediaItemToEntity(List<MediaItemDTO> dtos);
+    Set<MediaRelation> mediaItemToEntity(List<MediaItemDTO> dtos);
 
     @Mapping(target = "success", constant = "true")
-    MediaItemDTO mediaItemToDto(MovieRelation entity);
+    MediaItemDTO mediaItemToDto(MediaRelation entity);
 
-    List<MediaItemDTO> mediaItemToDto(Set<MovieRelation> entities);
+    List<MediaItemDTO> mediaItemToDto(Set<MediaRelation> entities);
 }

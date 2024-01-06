@@ -1,10 +1,10 @@
 package clc.resilient.backend.service.resilience;
 
-import clc.resilient.backend.service.controllers.ListResilience;
-import clc.resilient.backend.service.controllers.messages.ResponseMessage;
-import clc.resilient.backend.service.data.objects.MovieList;
-import clc.resilient.backend.service.data.objects.MovieRelation;
-import clc.resilient.backend.service.data.services.MovieListQueryService;
+import clc.resilient.backend.service.list.ListResilience;
+import clc.resilient.backend.service.list.dtos.ResponseDTO;
+import clc.resilient.backend.service.list.entities.MovieList;
+import clc.resilient.backend.service.list.entities.MediaRelation;
+import clc.resilient.backend.service.list.service.MovieListQueryService;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -310,8 +310,8 @@ public class ListControllerResilienceRetryTest {
         HttpEntity<?> requestEntity = new HttpEntity<>(null);
 
         // When
-        ResponseEntity<ResponseMessage> response = restTemplate.exchange(
-                requestUrl, HttpMethod.DELETE, requestEntity, ResponseMessage.class);
+        ResponseEntity<ResponseDTO> response = restTemplate.exchange(
+                requestUrl, HttpMethod.DELETE, requestEntity, ResponseDTO.class);
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -351,7 +351,7 @@ public class ListControllerResilienceRetryTest {
         int listId = 1;
         MovieList requestBody = new MovieList(); // Mock MovieList object for request
         requestBody.setItems(new HashSet<>());
-        Set<MovieRelation> removedMovies = Set.of(new MovieRelation()); // Mock return value from service
+        Set<MediaRelation> removedMovies = Set.of(new MediaRelation()); // Mock return value from service
 
         when(movieListQueryService.deleteMovie(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Transient failure")) // First two calls fail
@@ -362,8 +362,8 @@ public class ListControllerResilienceRetryTest {
         HttpEntity<MovieList> requestEntity = new HttpEntity<>(requestBody);
 
         // When
-        ResponseEntity<ResponseMessage> response = restTemplate.exchange(
-                requestUrl, HttpMethod.DELETE, requestEntity, ResponseMessage.class);
+        ResponseEntity<ResponseDTO> response = restTemplate.exchange(
+                requestUrl, HttpMethod.DELETE, requestEntity, ResponseDTO.class);
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
