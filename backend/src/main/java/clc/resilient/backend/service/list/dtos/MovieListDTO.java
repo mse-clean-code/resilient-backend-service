@@ -23,7 +23,7 @@ public class MovieListDTO {
     private String iso6391;
     @JsonProperty("public")
     private boolean visible;
-    private List<MediaItemDTO> items;
+    private List<MediaItemDTO> results;
     @JsonProperty("number_of_items")
     private int numberOfItems;
     @JsonProperty("backdrop_path")

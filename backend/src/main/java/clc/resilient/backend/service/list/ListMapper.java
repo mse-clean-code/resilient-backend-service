@@ -17,9 +17,11 @@ import java.util.Set;
 @Mapper(componentModel = "spring")
 public interface ListMapper {
     @Mapping(source = "backdropPath", target = "backdrop_path")
+    @Mapping(source = "results", target = "items")
     MovieList movieListToEntity(MovieListDTO dto);
 
     @Mapping(source = "backdrop_path", target = "backdropPath")
+    @Mapping(source = "items", target = "results")
     MovieListDTO movieListToDto(MovieList entity);
 
     List<MovieListDTO> movieListToDto(List<MovieList> entities);

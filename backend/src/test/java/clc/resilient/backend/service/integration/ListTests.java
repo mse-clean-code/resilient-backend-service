@@ -75,7 +75,7 @@ public class ListTests {
         assertNotNull(list);
         assertNotNull(list.getName());
         assertNotNull(list.getDescription());
-        assertFalse(list.getItems().isEmpty());
+        assertFalse(list.getResults().isEmpty());
     }
 
     @Test
@@ -156,7 +156,7 @@ public class ListTests {
 
         assertTrue(response.getSuccess());
         var list = response.getMovieListDTO();
-        var items = list.getItems();
+        var items = list.getResults();
         assertEquals(3, items.size());
         assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(550L)));
         assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(244786L)));
@@ -181,7 +181,7 @@ public class ListTests {
         assertNotNull(response);
         assertTrue(response.getSuccess());
         var list = response.getMovieListDTO();
-        var items = list.getItems();
+        var items = list.getResults();
         assertEquals(1, items.size());
         assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(550L)));
     }

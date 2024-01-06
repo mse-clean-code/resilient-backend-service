@@ -2,7 +2,6 @@ package clc.resilient.backend.service.resilience;
 
 import clc.resilient.backend.service.controllers.ListResilience;
 import clc.resilient.backend.service.controllers.messages.ResponseMessage;
-import clc.resilient.backend.service.controllers.messages.ResponseWithResults;
 import clc.resilient.backend.service.data.objects.MovieList;
 import clc.resilient.backend.service.data.objects.MovieRelation;
 import clc.resilient.backend.service.data.services.MovieListQueryService;
@@ -363,8 +362,8 @@ public class ListControllerResilienceRetryTest {
         HttpEntity<MovieList> requestEntity = new HttpEntity<>(requestBody);
 
         // When
-        ResponseEntity<ResponseWithResults> response = restTemplate.exchange(
-                requestUrl, HttpMethod.DELETE, requestEntity, ResponseWithResults.class);
+        ResponseEntity<ResponseMessage> response = restTemplate.exchange(
+                requestUrl, HttpMethod.DELETE, requestEntity, ResponseMessage.class);
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);

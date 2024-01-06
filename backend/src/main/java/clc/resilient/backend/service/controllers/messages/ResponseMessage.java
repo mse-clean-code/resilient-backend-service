@@ -6,8 +6,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import lombok.*;
 
-import java.util.List;
-
 @Getter
 @Setter
 @Builder
@@ -24,7 +22,7 @@ public class ResponseMessage {
 
     Long id;
 
-    List<Object> results;
+    // List<Object> results;
 
     @JsonUnwrapped
     @JsonInclude(JsonInclude.Include.NON_NULL)

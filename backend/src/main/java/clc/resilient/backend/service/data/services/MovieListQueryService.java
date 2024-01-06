@@ -69,13 +69,19 @@ public class MovieListQueryService {
     }
 
     @Transactional
-    @Validated({UpdateListValidation.class})
-    public MovieList updateList(@Valid MovieList updateList) {
+    // @Validated({UpdateListValidation.class})
+    // public MovieList updateList(@Valid MovieList updateList) {
+    public MovieList updateList(MovieList updateList) {
         // TODO: Handle not found
         var updateReference = movieListRepository.getReferenceById(updateList.getId());
-        updateReference.setName(updateList.getName());
-        updateReference.setDescription(updateList.getDescription());
+        if (updateList.getName() != null && !updateList.getName().isEmpty())
+            updateReference.setName(updateList.getName());
+        if (updateList.getDescription() != null)
+            updateReference.setDescription(updateList.getDescription());
         updateReference.setVisible(updateList.isVisible());
+        if (updateList.getBackdrop_path() != null)
+            updateReference.setBackdrop_path(updateList.getBackdrop_path());
+
         return updateList;
     }
 
