@@ -109,6 +109,25 @@ public class ListController {
 
     //region movie list item
 
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
+    @PostMapping("/tmdb/4/list/{list_id}/items")
+    public ResponseEntity<ResponseMessage> addItemsToList(
+        @PathVariable("list_id") @NotNull Long listId,
+        @RequestBody @NotNull MediaItemsDTO itemsDto
+    ) {
+        logger.debug("addItemsToList({}, {})", listId, itemsDto);
+        var items = mapper.mediaItemToEntity(itemsDto.getItems());
+        var list = movieListQueryService.addItemsToList(listId, items);
+        var listDto = mapper.movieListToDto(list);
+        var response = ResponseMessage.builder()
+            .success(true)
+            .statusMessage("The item/record was updated successfully.")
+            .id(listDto.getId())
+            .movieListDTO(listDto)
+            .build();
+        return ResponseEntity.ok(response);
+    }
 
 
     //endregion
@@ -182,40 +201,6 @@ public class ListController {
                     new ResponseOfMovieListsPaginated(1, 1, totalResults, movieLists);
             return ResponseEntity.ok(responseOfMovieListsPaginated);
         });
-    }
-
-    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
-    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
-    @PostMapping("/tmdb/4/list/{list_id}/items")
-    public ResponseEntity<ResponseMessage> addItemToList(
-        @PathVariable("list_id") Long listId,
-        @RequestBody MediaItemsDTO itemsDto
-    ) {
-        // Implement logic to add a movie to the list with ID listId
-        logger.debug("Add movie to list with ID: {}", listId);
-
-        var items = mapper.mediaItemToEntity(itemsDto.getItems());
-        var updatedList = movieListQueryService.addItemsToList(listId, items);
-        if (updatedList == null) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseWithResults(false, "Failed to add item to the list.", Collections.emptyList()));
-        }
-        /*
-        {
-            "success": true,
-            "status_code": 1,
-            "status_message": "Success.",
-            "results": [
-                {
-                    "media_id": 11,
-                    "media_type": "movie",
-                    "success": true
-                }
-            ]
-        }
-         */
-        ResponseMessage response = new ResponseWithResults(true, "Success.", Collections.singletonList(updatedList.getId()));
-        return ResponseEntity.ok(response);
     }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
@@ -364,7 +349,7 @@ public class ListController {
      */
     @SuppressWarnings("unused")
     public CompletionStage<ResponseEntity<String>> retryFallbackCompletion(Exception ex) {
-        logger.debug("retryFallback({})", ex.getMessage());
+        logger.warn("retryFallback", ex);
         return CompletableFuture.completedFuture(new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE));
     }
 

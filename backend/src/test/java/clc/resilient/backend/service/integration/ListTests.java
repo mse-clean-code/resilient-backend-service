@@ -3,6 +3,8 @@ package clc.resilient.backend.service.integration;
 import clc.resilient.backend.service.controllers.messages.ResponseMessage;
 import clc.resilient.backend.service.data.repositories.MovieListRepository;
 import clc.resilient.backend.service.data.repositories.MovieRelationRepository;
+import clc.resilient.backend.service.list.dtos.MediaItemDTO;
+import clc.resilient.backend.service.list.dtos.MediaItemsDTO;
 import clc.resilient.backend.service.list.dtos.MovieListDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -12,11 +14,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.RequestEntity;
 import org.springframework.test.annotation.DirtiesContext;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Kacper Urbaniec
@@ -50,7 +52,7 @@ public class ListTests {
         var createRequest = MovieListDTO.builder()
             .description("Hey!")
             .name("My Cool List")
-            .isPrivate(false)
+            .visible(false)
             .build();
 
         var response = restTemplate
@@ -61,7 +63,7 @@ public class ListTests {
         var createdList = response.getMovieListDTO();
         assertEquals(createRequest.getDescription(), createdList.getDescription());
         assertEquals(createRequest.getName(), createdList.getName());
-        assertEquals(createRequest.isPrivate(), createdList.isPrivate());
+        assertEquals(createRequest.isVisible(), createdList.isVisible());
         assertEquals(1, movieListRepository.count());
     }
 
@@ -73,7 +75,7 @@ public class ListTests {
             .id(listId)
             .description("Hey Hey!")
             .name("My Cooler List")
-            .isPrivate(true)
+            .visible(true)
             .build();
 
         var response = restTemplate
@@ -81,11 +83,11 @@ public class ListTests {
             .getBody();
 
         assertNotNull(response);
-        assertEquals(response.getSuccess(), true);
+        assertTrue(response.getSuccess());
         var updatedList = response.getMovieListDTO();
         assertEquals(updateRequest.getDescription(), updatedList.getDescription());
         assertEquals(updateRequest.getName(), updatedList.getName());
-        assertEquals(updateRequest.isPrivate(), updatedList.isPrivate());
+        assertEquals(updateRequest.isVisible(), updatedList.isVisible());
         assertEquals(1, movieListRepository.count());
     }
 
@@ -99,8 +101,31 @@ public class ListTests {
             .getBody();
 
         assertNotNull(response);
-        assertEquals(response.getSuccess(), true);
+        assertTrue(response.getSuccess());
         assertEquals(0, movieListRepository.count());
+    }
+
+    @Test
+    void add_items() {
+        var listId = addList();
+        var requestUrl = "/tmdb/4/list/" + listId + "/items";
+        var addRequest = new MediaItemsDTO();
+        addRequest.setItems(List.of(
+            MediaItemDTO.builder().mediaId(550L).mediaType("movie").build(),
+            MediaItemDTO.builder().mediaId(244786L).mediaType("movie").build(),
+            MediaItemDTO.builder().mediaId(1396L).mediaType("tv").build()
+        ));
+
+        var response = restTemplate
+            .postForObject(requestUrl, addRequest, ResponseMessage.class);
+
+        assertTrue(response.getSuccess());
+        var list = response.getMovieListDTO();
+        var items = list.getItems();
+        assertEquals(3, items.size());
+        assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(550L)));
+        assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(244786L)));
+        assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(1396L)));
     }
 
     private Long addList() {
@@ -108,7 +133,7 @@ public class ListTests {
         var createRequest = MovieListDTO.builder()
             .description("Hey!")
             .name("My Cool List")
-            .isPrivate(false)
+            .visible(false)
             .build();
         var response = restTemplate
             .postForObject(requestUrl, createRequest, ResponseMessage.class);

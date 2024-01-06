@@ -1,6 +1,5 @@
 package clc.resilient.backend.service.list.dtos;
 
-import clc.resilient.backend.service.data.objects.MovieRelation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -22,8 +21,9 @@ public class MovieListDTO {
     private String description;
     @JsonProperty("iso_639_1")
     private String iso6391;
-    private boolean isPrivate;
-    private List<MovieRelation> items;
+    @JsonProperty("public")
+    private boolean visible;
+    private List<MediaItemDTO> items;
     @JsonProperty("number_of_items")
     private int numberOfItems;
     @JsonProperty("backdrop_path")

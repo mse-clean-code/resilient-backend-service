@@ -8,6 +8,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Kacper Urbaniec
@@ -16,14 +17,18 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ListMapper {
     @Mapping(source = "backdropPath", target = "backdrop_path")
-    @Mapping(source = "private", target = "private")
     MovieList movieListToEntity(MovieListDTO dto);
 
     @Mapping(source = "backdrop_path", target = "backdropPath")
-    @Mapping(source = "private", target = "private")
     MovieListDTO movieListToDto(MovieList entity);
 
+    @Mapping(target = "movieList", ignore = true)
     MovieRelation mediaItemToEntity(MediaItemDTO dto);
 
-    List<MovieRelation> mediaItemToEntity(List<MediaItemDTO> dtos);
+    Set<MovieRelation> mediaItemToEntity(List<MediaItemDTO> dtos);
+
+    @Mapping(target = "success", constant = "true")
+    MediaItemDTO mediaItemToDto(MovieRelation entity);
+
+    List<MediaItemDTO> mediaItemToDto(Set<MovieRelation> entities);
 }

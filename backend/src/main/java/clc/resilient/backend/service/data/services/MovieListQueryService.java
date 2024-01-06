@@ -70,7 +70,7 @@ public class MovieListQueryService {
         var updateReference = movieListRepository.getReferenceById(updateList.getId());
         updateReference.setName(updateList.getName());
         updateReference.setDescription(updateList.getDescription());
-        updateReference.setPrivate(updateList.isPrivate());
+        updateReference.setVisible(updateList.isVisible());
         return updateList;
 
         // if (unknownItem.getId() == null) {
@@ -123,17 +123,12 @@ public class MovieListQueryService {
     }
 
     @Transactional
-    public MovieList addItemsToList(@NotNull Long id, List<MovieRelation> mediaItems) {
+    public MovieList addItemsToList(@NotNull Long id, Set<MovieRelation> mediaItems) {
         // TODO: Validate added items if really exist
         // TODO: Exception handling
         var list = movieListRepository.findById(id).orElseThrow();
         list.getItems().addAll(mediaItems);
-
-        // Fetch media item data from API
-        for (MovieRelation mediaItem : list.getItems()) {
-            fetchTmdbItem(mediaItem);
-        }
-
+        fetchTmdbItems(list);
         return list;
     }
 
@@ -155,7 +150,13 @@ public class MovieListQueryService {
         }
     }
 
-    private void fetchTmdbItem(MovieRelation item) {
+    private void fetchTmdbItems(@NotNull MovieList list) {
+        for (MovieRelation mediaItem : list.getItems()) {
+            fetchTmdbItem(mediaItem);
+        }
+    }
+
+    private void fetchTmdbItem(@NotNull MovieRelation item) {
         var id = item.getMediaId();
         var mediaType = item.getMediaType();
 

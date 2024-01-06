@@ -1,8 +1,8 @@
 package clc.resilient.backend.service.data.objects;
 
+import clc.resilient.backend.service.list.validators.MovieListConstraint;
 import clc.resilient.backend.service.list.validators.groups.CreateListValidation;
 import clc.resilient.backend.service.list.validators.groups.ListServiceValidation;
-import clc.resilient.backend.service.list.validators.MovieListConstraint;
 import clc.resilient.backend.service.list.validators.groups.UpdateListValidation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -12,9 +12,7 @@ import jakarta.validation.constraints.Null;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 // TODO: Remove JsonProperty annotations!
@@ -36,7 +34,7 @@ public class MovieList {
     private String description;
     @JsonProperty("iso_639_1")
     private String iso6391;
-    private boolean isPrivate;
+    private boolean visible;
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "movie_list_id")
@@ -46,7 +44,8 @@ public class MovieList {
     private String backdrop_path;
 
     public int getNumberOfItems() {
-        return items.size();
+        if (items != null) return items.size();
+        return 0;
     }
 
 

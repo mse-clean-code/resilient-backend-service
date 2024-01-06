@@ -1,10 +1,9 @@
 package clc.resilient.backend.service.list.dtos;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
+import com.fasterxml.jackson.annotation.*;
+import lombok.*;
+
+import java.util.Map;
 
 /**
  * @author Kacper Urbaniec
@@ -15,8 +14,18 @@ import lombok.Data;
 @AllArgsConstructor(access = AccessLevel.PUBLIC)
 public class MediaItemDTO {
     @JsonProperty("media_id")
-    private String mediaId;
+    private Long mediaId;
     @JsonProperty("media_type")
     private String mediaType;
     private Boolean success;
+
+    @JsonIgnore
+    private Map<String, Object> apiData;
+
+    // @JsonUnwrapped does not work on maps
+    // https://github.com/FasterXML/jackson-databind/issues/171
+    @JsonAnyGetter
+    public Map<String, Object> getMap() {
+        return apiData;
+    }
 }

@@ -26,7 +26,7 @@ public class MovieRelation {
     private MovieList movieList;
 
     @Transient
-    Map<String, Object> apiData = new HashMap<>(0);
+    private Map<String, Object> apiData = new HashMap<>(0);
 
     @Override
     public boolean equals(Object o) {
