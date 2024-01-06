@@ -64,6 +64,20 @@ public class ListTests {
     }
 
     @Test
+    void get_list() {
+        var listId = addList();
+        var requestUrl = "/tmdb/4/list/" + listId;
+
+        var list = restTemplate
+            .getForObject(requestUrl, MovieListDTO.class);
+
+        assertNotNull(list);
+        assertNotNull(list.getName());
+        assertNotNull(list.getDescription());
+        assertFalse(list.getItems().isEmpty());
+    }
+
+    @Test
     void create_list() {
         var requestUrl = "/tmdb/4/list";
         var createRequest = MovieListDTO.builder()
@@ -166,6 +180,8 @@ public class ListTests {
         assertEquals(1, items.size());
         assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(550L)));
     }
+
+    public record AddListResult(Long id, MovieListDTO list) {}
 
     private Long addList() {
         var requestUrl = "/tmdb/4/list";

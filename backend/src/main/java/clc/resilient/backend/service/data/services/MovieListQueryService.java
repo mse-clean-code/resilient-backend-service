@@ -47,13 +47,16 @@ public class MovieListQueryService {
         this.objectMapper = objectMapper;
     }
 
-    public List<MovieList> getAll() {
+    @Transactional(readOnly = true)
+    public List<MovieList> getAllWithoutItems() {
         return movieListRepository.findAll();
     }
 
-    public MovieList getItem(Long id) throws NoSuchElementException {
-        Optional<MovieList> optionalItem = movieListRepository.findById(id);
-        return optionalItem.orElseThrow(NoSuchElementException::new);
+    @Transactional(readOnly = true)
+    public MovieList getWithItems(@NotNull Long id) {
+        var list = movieListRepository.findById(id).orElseThrow();
+        fetchTmdbItems(list);
+        return list;
     }
 
     @Transactional
@@ -68,7 +71,7 @@ public class MovieListQueryService {
     @Transactional
     @Validated({UpdateListValidation.class})
     public MovieList updateList(@Valid MovieList updateList) {
-        // TODO: Catch not found!
+        // TODO: Handle not found
         var updateReference = movieListRepository.getReferenceById(updateList.getId());
         updateReference.setName(updateList.getName());
         updateReference.setDescription(updateList.getDescription());
@@ -103,11 +106,6 @@ public class MovieListQueryService {
         list.setNumberOfItems(list.getItems().size());
         fetchTmdbItems(list);
         return list;
-    }
-
-    @Transactional(readOnly = true)
-    public List<MovieList> getAllWithoutItems() {
-        return movieListRepository.findAll();
     }
 
     public Set<MovieRelation> deleteMovie(MovieList toDeleteMovie) {
@@ -146,6 +144,7 @@ public class MovieListQueryService {
         var json = response.getBody();
 
         try {
+            @SuppressWarnings("unchecked")
             var data = (Map<String, Object>) objectMapper.readValue(json, Map.class);
             item.setApiData(data);
         } catch (JsonProcessingException ex) {

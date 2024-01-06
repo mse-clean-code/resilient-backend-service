@@ -56,7 +56,7 @@ public class ListControllerResilienceRetryTest {
         // Given
         String accountId = "123";
         List<MovieList> movieLists = Arrays.asList(new MovieList(), new MovieList()); // Mock movie lists
-        when(movieListQueryService.getAll())
+        when(movieListQueryService.getAllWithoutItems())
                 .thenThrow(new RuntimeException("Transient failure")) // First two calls fail
                 .thenThrow(new RuntimeException("Transient failure"))
                 .thenReturn(movieLists);
@@ -73,14 +73,14 @@ public class ListControllerResilienceRetryTest {
         assertNotNull(response.getBody());
 
         // Verify that the service method was called
-        verify(movieListQueryService, times(3)).getAll();
+        verify(movieListQueryService, times(3)).getAllWithoutItems();
     }
 
     @Test
     void testAccountLists_Failure() {
         // Given
         String accountId = "123";
-        when(movieListQueryService.getAll())
+        when(movieListQueryService.getAllWithoutItems())
                 .thenThrow(new RuntimeException("Persistent failure"));
 
         var requestUrl = "/tmdb/4/account/" + accountId + "/lists";
@@ -95,7 +95,7 @@ public class ListControllerResilienceRetryTest {
         assertNotNull(response.getBody());
 
         // Verify that the service method was called
-        verify(movieListQueryService, times(5)).getAll();
+        verify(movieListQueryService, times(5)).getAllWithoutItems();
     }
 
     @Test
@@ -209,7 +209,7 @@ public class ListControllerResilienceRetryTest {
     void testGetListDetails_Retry_Success() {
         // Given
         Long listId = 1L;
-        when(movieListQueryService.getItem(listId))
+        when(movieListQueryService.getWithItems(listId))
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
                 .thenReturn(new MovieList()); // Subsequent calls succeed
@@ -224,14 +224,14 @@ public class ListControllerResilienceRetryTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertNotNull(response.getBody());
         // Verify that the service method was called twice (one failure, one success)
-        verify(movieListQueryService, times(3)).getItem(listId);
+        verify(movieListQueryService, times(3)).getWithItems(listId);
     }
 
     @Test
     void testGetListDetails_Retry_Failure() {
         // Given
         Long listId = 1L;
-        when(movieListQueryService.getItem(listId))
+        when(movieListQueryService.getWithItems(listId))
                 .thenThrow(new RuntimeException("Persistent failure"));
 
         var requestUrl = "/tmdb/4/list/" + listId;
@@ -244,7 +244,7 @@ public class ListControllerResilienceRetryTest {
         assertThat(response.getBody()).contains("all retries have exhausted");
 
         // Verify that the service method was called as per the retry configuration
-        verify(movieListQueryService, times(5)).getItem(listId);
+        verify(movieListQueryService, times(5)).getWithItems(listId);
     }
 
     @Test

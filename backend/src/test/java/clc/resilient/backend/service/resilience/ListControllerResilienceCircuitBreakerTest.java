@@ -58,7 +58,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         String accountId = "test-account";
 
         // Simulate failure in the service method
-        when(movieListQueryService.getAll())
+        when(movieListQueryService.getAllWithoutItems())
                 .thenThrow(new RuntimeException("Service failure"));
 
         var requestUrl = "/tmdb/4/account/" + accountId + "/lists";
@@ -78,7 +78,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         });
 
         // Verify that the service method was called as expected
-        verify(movieListQueryService, times(5*5)).getAll();
+        verify(movieListQueryService, times(5*5)).getAllWithoutItems();
     }
 
     @Test
@@ -152,7 +152,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         Long listId = 0L;
 
         // Simulate failure in the service method
-        when(movieListQueryService.getItem(listId))
+        when(movieListQueryService.getWithItems(listId))
                 .thenThrow(new RuntimeException("Service failure"));
 
         var requestUrl = "/tmdb/4/list/" + listId;
@@ -170,7 +170,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         });
 
         // Verify that the service method was called as expected
-        verify(movieListQueryService, times(5*5)).getItem(listId);
+        verify(movieListQueryService, times(5*5)).getWithItems(listId);
     }
 
     @Test
