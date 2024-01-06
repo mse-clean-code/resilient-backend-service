@@ -284,7 +284,7 @@ public class ListController {
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
-    @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
+    // @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
     @PostMapping("/tmdb/4/list")
     public CompletionStage<ResponseEntity<ResponseMessage>> createList(
         @RequestBody @NotNull MovieListDTO createListDto
@@ -292,7 +292,7 @@ public class ListController {
         logger.debug("createList({})", createListDto);
         return CompletableFuture.supplyAsync(() -> {
             var list = mapper.movieListToEntity(createListDto);
-            movieListQueryService.add(list);
+            list = movieListQueryService.add(list);
             var listDto = mapper.movieListToDto(list);
             // TODO: Use builder pattern?
             ResponseMessage response = new ResponseWithId(true, "Success.", listDto.getId());

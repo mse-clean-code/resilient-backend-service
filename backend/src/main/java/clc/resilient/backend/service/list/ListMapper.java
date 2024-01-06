@@ -12,8 +12,10 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface ListMapper {
     @Mapping(source = "backdropPath", target = "backdrop_path")
+    @Mapping(source = "private", target = "private")
     MovieList movieListToEntity(MovieListDTO dto);
 
     @Mapping(source = "backdrop_path", target = "backdropPath")
+    @Mapping(source = "private", target = "private")
     MovieListDTO movieListToDto(MovieList entity);
 }

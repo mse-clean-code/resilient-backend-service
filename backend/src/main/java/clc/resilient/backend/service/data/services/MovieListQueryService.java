@@ -4,9 +4,10 @@ import clc.resilient.backend.service.data.objects.MovieList;
 import clc.resilient.backend.service.data.objects.MovieRelation;
 import clc.resilient.backend.service.data.repositories.MovieListRepository;
 import clc.resilient.backend.service.data.repositories.MovieRelationRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
+@Validated
 public class MovieListQueryService {
     private final MovieListRepository movieListRepository;
 
@@ -34,7 +36,7 @@ public class MovieListQueryService {
     }
 
     @Transactional
-    public MovieList add(MovieList addList) {
+    public MovieList add(@Valid MovieList addList) {
         return movieListRepository.save(addList);
     }
 

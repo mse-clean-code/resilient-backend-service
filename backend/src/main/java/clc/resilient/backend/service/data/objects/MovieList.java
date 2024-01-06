@@ -2,6 +2,8 @@ package clc.resilient.backend.service.data.objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,6 +20,8 @@ public class MovieList {
     @Id
     @GeneratedValue
     private Long id;
+    @NotNull
+    @NotEmpty
     private String name;
     private String description;
     @JsonProperty("iso_639_1")
