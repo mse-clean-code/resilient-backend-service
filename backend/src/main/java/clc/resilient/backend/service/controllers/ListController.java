@@ -1,6 +1,8 @@
 package clc.resilient.backend.service.controllers;
 
-import clc.resilient.backend.service.controllers.messages.*;
+import clc.resilient.backend.service.controllers.messages.ResponseMessage;
+import clc.resilient.backend.service.controllers.messages.ResponseOfMovieListsPaginated;
+import clc.resilient.backend.service.controllers.messages.ResponseWithResults;
 import clc.resilient.backend.service.data.objects.MovieList;
 import clc.resilient.backend.service.data.services.MovieListQueryService;
 import clc.resilient.backend.service.list.ListMapper;
@@ -10,12 +12,9 @@ import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -46,6 +45,76 @@ public class ListController {
     }
 
     //region movie list
+
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
+    @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
+    @RequestMapping({"/tmdb/4/account/{account_id}/lists"})
+    public CompletionStage<ResponseEntity<ResponseOfMovieListsPaginated>> accountLists(
+        @SuppressWarnings("unused") @PathVariable String account_id
+    ) {
+        /*
+        {
+            "page": 1,
+            "results": [
+                {
+                    "account_object_id": "658add5e5aba3266b0bab7e8",
+                    "adult": 0,
+                    "average_rating": 0.0,
+                    "backdrop_path": null,
+                    "created_at": "2023-12-27 10:58:05 UTC",
+                    "description": "test",
+                    "featured": 0,
+                    "id": 8284698,
+                    "iso_3166_1": "US",
+                    "iso_639_1": "en",
+                    "name": "test16",
+                    "number_of_items": 0,
+                    "poster_path": null,
+                    "public": 1,
+                    "revenue": 0,
+                    "runtime": "0",
+                    "sort_by": 1,
+                    "updated_at": "2023-12-27 10:58:05 UTC"
+                },
+                {
+                    "account_object_id": "658add5e5aba3266b0bab7e8",
+                    "adult": 0,
+                    "average_rating": 0.0,
+                    "backdrop_path": null,
+                    "created_at": "2023-12-27 10:58:01 UTC",
+                    "description": "test",
+                    "featured": 0,
+                    "id": 8284696,
+                    "iso_3166_1": "US",
+                    "iso_639_1": "en",
+                    "name": "test15",
+                    "number_of_items": 0,
+                    "poster_path": null,
+                    "public": 1,
+                    "revenue": 0,
+                    "runtime": "0",
+                    "sort_by": 1,
+                    "updated_at": "2023-12-27 10:58:01 UTC"
+                },
+            ],
+            "total_pages": 1,
+            "total_results": 19
+        }
+         */
+        logger.debug("accountLists()");
+        return CompletableFuture.supplyAsync(() -> {
+            var lists = movieListQueryService.getAllWithoutItems();
+            var listDtos = mapper.movieListToDto(lists);
+            var response = ResponseOfMovieListsPaginated.builder()
+                .page(1)
+                .totalPages(1)
+                .totalResults(listDtos.size())
+                .results(listDtos)
+                .build();
+            return ResponseEntity.ok(response);
+        });
+    }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
@@ -129,79 +198,27 @@ public class ListController {
         return ResponseEntity.ok(response);
     }
 
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
+    @DeleteMapping("/tmdb/4/list/{list_id}/items")
+    public ResponseEntity<ResponseMessage> removeItemsFromList(
+        @PathVariable("list_id") @NotNull Long listId,
+        @RequestBody @NotNull MediaItemsDTO itemsDto
+    ) {
+        logger.debug("removeItemsFromList({}, {})", listId, itemsDto);
+        var items = mapper.mediaItemToEntity(itemsDto.getItems());
+        var list = movieListQueryService.removeItemsFromList(listId, items);
+        var listDto = mapper.movieListToDto(list);
+        var response = ResponseMessage.builder()
+            .success(true)
+            .statusMessage("The item/record was updated successfully.")
+            .id(listDto.getId())
+            .movieListDTO(listDto)
+            .build();
+        return ResponseEntity.ok(response);
+    }
 
     //endregion
-
-    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
-    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
-    @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
-    @RequestMapping({"/tmdb/4/account/{account_id}/lists"})
-    public CompletionStage<ResponseEntity<ResponseOfMovieListsPaginated>> accountLists(
-            @RequestBody(required = false) String body,
-            String account_id,
-            HttpMethod method,
-            HttpServletRequest request,
-            HttpServletResponse response
-    ) {
-        /*
-        {
-            "page": 1,
-            "results": [
-                {
-                    "account_object_id": "658add5e5aba3266b0bab7e8",
-                    "adult": 0,
-                    "average_rating": 0.0,
-                    "backdrop_path": null,
-                    "created_at": "2023-12-27 10:58:05 UTC",
-                    "description": "test",
-                    "featured": 0,
-                    "id": 8284698,
-                    "iso_3166_1": "US",
-                    "iso_639_1": "en",
-                    "name": "test16",
-                    "number_of_items": 0,
-                    "poster_path": null,
-                    "public": 1,
-                    "revenue": 0,
-                    "runtime": "0",
-                    "sort_by": 1,
-                    "updated_at": "2023-12-27 10:58:05 UTC"
-                },
-                {
-                    "account_object_id": "658add5e5aba3266b0bab7e8",
-                    "adult": 0,
-                    "average_rating": 0.0,
-                    "backdrop_path": null,
-                    "created_at": "2023-12-27 10:58:01 UTC",
-                    "description": "test",
-                    "featured": 0,
-                    "id": 8284696,
-                    "iso_3166_1": "US",
-                    "iso_639_1": "en",
-                    "name": "test15",
-                    "number_of_items": 0,
-                    "poster_path": null,
-                    "public": 1,
-                    "revenue": 0,
-                    "runtime": "0",
-                    "sort_by": 1,
-                    "updated_at": "2023-12-27 10:58:01 UTC"
-                },
-            ],
-            "total_pages": 1,
-            "total_results": 19
-        }
-         */
-        logger.debug("Custom List Action | {} | {}", method.name(), request.getRequestURI());
-        return CompletableFuture.supplyAsync(() -> {
-            // Your existing logic here
-            var movieLists = movieListQueryService.getAll();
-            int totalResults = movieLists.size();
-            ResponseOfMovieListsPaginated responseOfMovieListsPaginated =
-                    new ResponseOfMovieListsPaginated(1, 1, totalResults, movieLists);
-            return ResponseEntity.ok(responseOfMovieListsPaginated);
-        });
-    }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
@@ -300,20 +317,7 @@ public class ListController {
         }
     }
 
-    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
-    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
-    @DeleteMapping("/tmdb/4/list/{list_id}/items")
-    public ResponseEntity<ResponseWithResults> removeItemFromList(
-            @PathVariable("list_id") int listId,
-            @RequestBody MovieList requestBody
-    ) {
-        logger.debug("Remove item: {} from list with ID : {}", requestBody, listId);
 
-        var removedMovies = movieListQueryService.deleteMovie(requestBody);
-        // Implement logic to remove a movie from the list with ID listId
-        ResponseWithResults response = new ResponseWithResults(true, "Success.", Collections.singletonList(removedMovies));
-        return ResponseEntity.ok(response);
-    }
 
     /**
      * Function that is executed when all retries attempts have exhausted.

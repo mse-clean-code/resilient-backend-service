@@ -3,6 +3,7 @@ package clc.resilient.backend.service.list.dtos;
 import com.fasterxml.jackson.annotation.*;
 import lombok.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -27,5 +28,12 @@ public class MediaItemDTO {
     @JsonAnyGetter
     public Map<String, Object> getMap() {
         return apiData;
+    }
+
+    @JsonAnySetter
+    public void add(String key, Object value) {
+        // Occurs only during testing
+        if (apiData == null) apiData = new HashMap<>();
+        apiData.put(key, value);
     }
 }

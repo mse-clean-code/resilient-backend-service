@@ -35,18 +35,11 @@ public class MovieList {
     @JsonProperty("iso_639_1")
     private String iso6391;
     private boolean visible;
+    private String backdrop_path;
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "movie_list_id")
     private Set<MovieRelation> items = new HashSet<>(0);
     @JsonProperty("number_of_items")
     private int numberOfItems;
-    private String backdrop_path;
-
-    public int getNumberOfItems() {
-        if (items != null) return items.size();
-        return 0;
-    }
-
-
 }

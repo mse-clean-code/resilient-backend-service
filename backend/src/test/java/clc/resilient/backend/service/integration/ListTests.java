@@ -1,6 +1,7 @@
 package clc.resilient.backend.service.integration;
 
 import clc.resilient.backend.service.controllers.messages.ResponseMessage;
+import clc.resilient.backend.service.controllers.messages.ResponseOfMovieListsPaginated;
 import clc.resilient.backend.service.data.repositories.MovieListRepository;
 import clc.resilient.backend.service.data.repositories.MovieRelationRepository;
 import clc.resilient.backend.service.list.dtos.MediaItemDTO;
@@ -44,6 +45,22 @@ public class ListTests {
     public void clear() {
         movieRelationRepository.deleteAll();
         movieListRepository.deleteAll();
+    }
+
+    @Test
+    void get_lists() {
+        for (int i = 0; i < 10; ++i) {
+            addList();
+        }
+        var requestUrl = "/tmdb/4/account/0/lists";
+
+        var response = restTemplate
+            .getForObject(requestUrl, ResponseOfMovieListsPaginated.class);
+
+        assertEquals(1,  response.getPage());
+        assertEquals(1,  response.getTotalPages());
+        assertEquals(10, response.getTotalResults());
+        assertEquals(10, response.getResults().size());
     }
 
     @Test
@@ -128,6 +145,28 @@ public class ListTests {
         assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(1396L)));
     }
 
+    @Test
+    void remove_items() {
+        var listId = addList();
+        var requestUrl = "/tmdb/4/list/" + listId + "/items";
+        var removeRequest = new MediaItemsDTO();
+        removeRequest.setItems(List.of(
+            MediaItemDTO.builder().mediaId(244786L).mediaType("movie").build(),
+            MediaItemDTO.builder().mediaId(1396L).mediaType("tv").build()
+        ));
+
+        var response = restTemplate
+            .exchange(requestUrl, HttpMethod.DELETE, new HttpEntity<>(removeRequest), ResponseMessage.class)
+            .getBody();
+
+        assertNotNull(response);
+        assertTrue(response.getSuccess());
+        var list = response.getMovieListDTO();
+        var items = list.getItems();
+        assertEquals(1, items.size());
+        assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(550L)));
+    }
+
     private Long addList() {
         var requestUrl = "/tmdb/4/list";
         var createRequest = MovieListDTO.builder()
@@ -137,7 +176,20 @@ public class ListTests {
             .build();
         var response = restTemplate
             .postForObject(requestUrl, createRequest, ResponseMessage.class);
-        return response.getId();
+
+        var listId = response.getId();
+        requestUrl = "/tmdb/4/list/" + listId + "/items";
+        var addRequest = new MediaItemsDTO();
+        addRequest.setItems(List.of(
+            MediaItemDTO.builder().mediaId(550L).mediaType("movie").build(),
+            MediaItemDTO.builder().mediaId(244786L).mediaType("movie").build(),
+            MediaItemDTO.builder().mediaId(1396L).mediaType("tv").build()
+        ));
+
+        response = restTemplate
+            .postForObject(requestUrl, addRequest, ResponseMessage.class);
+
+        return listId;
     }
 
     private <T> T extractResult(ResponseMessage response, Class<T> clazz) {

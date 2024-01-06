@@ -17,6 +17,9 @@ import java.util.Objects;
 @Setter
 public class MovieRelation {
     @Id
+    @GeneratedValue
+    Long id;
+
     Long mediaId;
     String mediaType;
 

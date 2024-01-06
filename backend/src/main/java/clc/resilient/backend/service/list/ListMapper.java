@@ -22,7 +22,10 @@ public interface ListMapper {
     @Mapping(source = "backdrop_path", target = "backdropPath")
     MovieListDTO movieListToDto(MovieList entity);
 
+    List<MovieListDTO> movieListToDto(List<MovieList> entities);
+
     @Mapping(target = "movieList", ignore = true)
+    @Mapping(target = "id", ignore = true)
     MovieRelation mediaItemToEntity(MediaItemDTO dto);
 
     Set<MovieRelation> mediaItemToEntity(List<MediaItemDTO> dtos);
