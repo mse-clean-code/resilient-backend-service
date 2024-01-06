@@ -49,6 +49,10 @@ export class ListDetailAdapter extends RxState<{
   readonly routerListId$ = this.routerState.select(map((state) => state?.type));
 
   private readonly listInfoUpdateEvent$ = this.ui.listInfoUpdate$.pipe(
+    map((u) => {
+      console.log("up", u);
+      return u;
+    }),
     withLatestFrom(this.select('id'))
   );
 
