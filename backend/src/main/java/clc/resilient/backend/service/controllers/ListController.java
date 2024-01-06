@@ -44,6 +44,75 @@ public class ListController {
         this.mapper = mapper;
     }
 
+    //region movie list
+
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
+    @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
+    @PostMapping("/tmdb/4/list")
+    public CompletionStage<ResponseEntity<ResponseMessage>> createList(
+        @RequestBody @NotNull MovieListDTO createListDto
+    ) {
+        logger.debug("createList({})", createListDto);
+        return CompletableFuture.supplyAsync(() -> {
+            var list = mapper.movieListToEntity(createListDto);
+            list = movieListQueryService.createList(list);
+            var listDto = mapper.movieListToDto(list);
+            var response = ResponseMessage.builder()
+                .success(true)
+                .statusMessage("The item/record was created successfully.")
+                .id(listDto.getId())
+                .results(Collections.singletonList(listDto))
+                .build();
+            return ResponseEntity.ok(response);
+        });
+    }
+
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
+    @PutMapping("/tmdb/4/list/{list_id}")
+    public ResponseEntity<ResponseMessage> updateList(
+        @PathVariable("list_id") @NotNull String listId,
+        @RequestBody @NotNull MovieListDTO updateListDto
+    ) {
+        // Implement logic to add a movie to the list with ID listId
+        logger.debug("updateList({}, {})", listId, updateListDto);
+        var list = mapper.movieListToEntity(updateListDto);
+        list = movieListQueryService.updateList(list);
+        var listDto = mapper.movieListToDto(list);
+        var response = ResponseMessage.builder()
+            .success(true)
+            .statusMessage("The item/record was updated successfully.")
+            .id(listDto.getId())
+            .results(Collections.singletonList(listDto))
+            .build();
+        return ResponseEntity.ok(response);
+    }
+
+    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
+    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
+    @DeleteMapping("/tmdb/4/{list_id}")
+    public ResponseEntity<ResponseMessage> deleteList(
+        @PathVariable("list_id") @NotNull Long listId
+    ) {
+        logger.debug("deleteList({})", listId);
+        movieListQueryService.deleteList(listId);
+        var response = ResponseMessage.builder()
+            .success(true)
+            .statusMessage("The item/record was deleted successfully.")
+            .id(listId)
+            .build();
+        return ResponseEntity.ok(response);
+    }
+
+    //endregion
+
+    //region movie list item
+
+
+
+    //endregion
+
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
     @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
@@ -115,7 +184,6 @@ public class ListController {
         });
     }
 
-    // Add Movie to List
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @PostMapping("/tmdb/4/list/{list_id}/items")
@@ -126,7 +194,7 @@ public class ListController {
         // Implement logic to add a movie to the list with ID listId
         logger.debug("Add movie to list with ID: {}", listId);
 
-        var updatedList = movieListQueryService.addList(movieList);
+        var updatedList = movieListQueryService.createList(movieList);
         if (updatedList == null) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ResponseWithResults(false, "Failed to add item to the list.", Collections.emptyList()));
@@ -149,41 +217,6 @@ public class ListController {
         return ResponseEntity.ok(response);
     }
 
-    // Add Movie to List
-    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
-    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
-    @PutMapping("/tmdb/4/list/{list_id}")
-    public ResponseEntity<ResponseMessage> updateItem(
-            @PathVariable("list_id") String listId,
-            @RequestBody MovieList movieList
-    ) {
-        // Implement logic to add a movie to the list with ID listId
-        logger.debug("Update item with ID: {}", listId);
-
-        var updatedList = movieListQueryService.addList(movieList);
-        if (updatedList == null) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ResponseWithResults(false, "Failed to update item.", Collections.emptyList()));
-        }
-        /*
-        {
-            "success": true,
-            "status_code": 1,
-            "status_message": "Success.",
-            "results": [
-                {
-                    "media_id": 11,
-                    "media_type": "movie",
-                    "success": true
-                }
-            ]
-        }
-         */
-        ResponseMessage response = new ResponseWithResults(true, "Success.", Collections.singletonList(updatedList.getId()));
-        return ResponseEntity.ok(response);
-    }
-
-    // Get List Details
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @GetMapping("/tmdb/4/list/{list_id}")
@@ -279,44 +312,6 @@ public class ListController {
             logger.error("Error fetching list details: {}", ex.getMessage());
             throw ex;
         }
-    }
-
-    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
-    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
-    @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
-    @PostMapping("/tmdb/4/list")
-    public CompletionStage<ResponseEntity<ResponseMessage>> createList(
-        @RequestBody @NotNull MovieListDTO createListDto
-    ) {
-        logger.debug("createList({})", createListDto);
-        return CompletableFuture.supplyAsync(() -> {
-            var list = mapper.movieListToEntity(createListDto);
-            list = movieListQueryService.addList(list);
-            var listDto = mapper.movieListToDto(list);
-            var response = ResponseMessage.builder()
-                .success(true)
-                .statusMessage("The item/record was created successfully.")
-                .id(listDto.getId())
-                .results(Collections.singletonList(listDto))
-                .build();
-            return ResponseEntity.ok(response);
-        });
-    }
-
-    @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
-    @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
-    @DeleteMapping("/tmdb/4/{list_id}")
-    public ResponseEntity<ResponseMessage> deleteList(
-        @PathVariable("list_id") @NotNull Long listId
-    ) {
-        logger.debug("deleteList({})", listId);
-        movieListQueryService.deleteList(listId);
-        var response = ResponseMessage.builder()
-            .success(true)
-            .statusMessage("The item/record was deleted successfully.")
-            .id(listId)
-            .build();
-        return ResponseEntity.ok(response);
     }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")

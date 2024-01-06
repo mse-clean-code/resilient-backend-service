@@ -21,22 +21,42 @@ public class ListValidatorTest {
     private MovieListQueryService service;
 
     @Test
-    void add_list_fail_name_null() {
+    void create_list_fail_name_null() {
         var list = new MovieList();
         list.setName(null);
 
         assertThrows(ConstraintViolationException.class, () -> {
-            service.addList(list);
+            service.createList(list);
         });
     }
 
     @Test
-    void add_list_fail_name_empty() {
+    void create_list_fail_name_empty() {
         var list = new MovieList();
         list.setName("");
 
         assertThrows(ConstraintViolationException.class, () -> {
-            service.addList(list);
+            service.createList(list);
+        });
+    }
+
+    @Test
+    void create_list_fail_id_set() {
+        var list = new MovieList();
+        list.setId(42L);
+
+        assertThrows(ConstraintViolationException.class, () -> {
+            service.createList(list);
+        });
+    }
+
+    @Test
+    void update_list_fail_id_null() {
+        var list = new MovieList();
+        list.setId(null);
+
+        assertThrows(ConstraintViolationException.class, () -> {
+            service.updateList(list);
         });
     }
 }

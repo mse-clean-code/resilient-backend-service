@@ -1,4 +1,4 @@
-package clc.resilient.backend.service.list.validators;
+package clc.resilient.backend.service.list.validators.groups;
 
 /**
  * @author Kacper Urbaniec

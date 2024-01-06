@@ -10,10 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.RequestEntity;
 import org.springframework.test.annotation.DirtiesContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * @author Kacper Urbaniec
@@ -42,7 +45,7 @@ public class ListTests {
     }
 
     @Test
-    void add_list() {
+    void create_list() {
         var requestUrl = "/tmdb/4/list";
         var createRequest = MovieListDTO.builder()
             .description("Hey!")
@@ -62,14 +65,39 @@ public class ListTests {
     }
 
     @Test
-    void delete_list() {
+    void update_list() {
         var listId = addList();
         var requestUrl = "/tmdb/4/list/" + listId;
+        var updateRequest = MovieListDTO.builder()
+            .id(listId)
+            .description("Hey Hey!")
+            .name("My Cooler List")
+            .isPrivate(true)
+            .build();
+
+        var response = restTemplate
+            .exchange(requestUrl, HttpMethod.PUT, new HttpEntity<>(updateRequest), ResponseMessage.class)
+            .getBody();
+
+        assertNotNull(response);
+        assertEquals(response.getSuccess(), true);
+        var updatedList = extractResult(response, MovieListDTO.class);
+        assertEquals(updateRequest.getDescription(), updatedList.getDescription());
+        assertEquals(updateRequest.getName(), updatedList.getName());
+        assertEquals(updateRequest.isPrivate(), updatedList.isPrivate());
+        assertEquals(1, movieListRepository.count());
+    }
+
+    @Test
+    void delete_list() {
+        var listId = addList();
+        var requestUrl = "/tmdb/4/" + listId;
 
         var response = restTemplate
             .exchange(requestUrl, HttpMethod.DELETE, null, ResponseMessage.class)
             .getBody();
 
+        assertNotNull(response);
         assertEquals(response.getSuccess(), true);
         assertEquals(0, movieListRepository.count());
     }
@@ -81,7 +109,8 @@ public class ListTests {
             .name("My Cool List")
             .isPrivate(false)
             .build();
-        var response = restTemplate.postForObject(requestUrl, createRequest, ResponseMessage.class);
+        var response = restTemplate
+            .postForObject(requestUrl, createRequest, ResponseMessage.class);
         return response.getId();
     }
 

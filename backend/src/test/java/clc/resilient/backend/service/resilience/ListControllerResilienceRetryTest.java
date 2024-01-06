@@ -109,7 +109,7 @@ public class ListControllerResilienceRetryTest {
         expectedReturnMovieList.setId(null);
         expectedReturnMovieList.setItems(new ArrayList<>());
 
-        when(movieListQueryService.addList(any(MovieList.class)))
+        when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
                 .thenReturn(new MovieList()); // Subsequent calls succeed
@@ -123,7 +123,7 @@ public class ListControllerResilienceRetryTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertNotNull(response.getBody());
         // Verify that the service method was called twice (one failure, one success)
-        verify(movieListQueryService, times(3)).addList(any(MovieList.class));
+        verify(movieListQueryService, times(3)).createList(any(MovieList.class));
     }
 
     @Test
@@ -135,7 +135,7 @@ public class ListControllerResilienceRetryTest {
         expectedReturnMovieList.setId(null);
         expectedReturnMovieList.setItems(new ArrayList<>());
 
-        when(movieListQueryService.addList(any(MovieList.class)))
+        when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Persistent failure")); // First call fails
 
 
@@ -148,7 +148,7 @@ public class ListControllerResilienceRetryTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertNotNull(response.getBody());
         // Verify that the service method was called twice (one failure, one success)
-        verify(movieListQueryService, times(5)).addList(any(MovieList.class));
+        verify(movieListQueryService, times(5)).createList(any(MovieList.class));
     }
 
     @Test
@@ -160,7 +160,7 @@ public class ListControllerResilienceRetryTest {
         expectedReturnMovieList.setId(null);
         expectedReturnMovieList.setItems(new ArrayList<>());
 
-        when(movieListQueryService.addList(any(MovieList.class)))
+        when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
                 .thenReturn(new MovieList()); // Subsequent calls succeed
@@ -176,7 +176,7 @@ public class ListControllerResilienceRetryTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertNotNull(response.getBody());
         // Verify that the service method was called twice (one failure, one success)
-        verify(movieListQueryService, times(3)).addList(any(MovieList.class));
+        verify(movieListQueryService, times(3)).createList(any(MovieList.class));
     }
 
     @Test
@@ -188,7 +188,7 @@ public class ListControllerResilienceRetryTest {
         expectedReturnMovieList.setId(null);
         expectedReturnMovieList.setItems(new ArrayList<>());
 
-        when(movieListQueryService.addList(any(MovieList.class)))
+        when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Persistent failure")); // First call fails
 
 
@@ -204,7 +204,7 @@ public class ListControllerResilienceRetryTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertNotNull(response.getBody());
         // Verify that the service method was called twice (one failure, one success)
-        verify(movieListQueryService, times(5)).addList(any(MovieList.class));
+        verify(movieListQueryService, times(5)).createList(any(MovieList.class));
     }
 
     @Test
@@ -256,7 +256,7 @@ public class ListControllerResilienceRetryTest {
         expectedReturnMovieList.setId(null);
         expectedReturnMovieList.setItems(new ArrayList<>());
 
-        when(movieListQueryService.addList(any(MovieList.class)))
+        when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Transient failure")) // First two calls fail
                 .thenThrow(new RuntimeException("Transient failure"))
                 .thenReturn(new MovieList()); // Third call succeeds
@@ -272,7 +272,7 @@ public class ListControllerResilienceRetryTest {
         assertNotNull(response.getBody());
 
         // Verify that the service method was called three times
-        verify(movieListQueryService, times(3)).addList(any(MovieList.class));
+        verify(movieListQueryService, times(3)).createList(any(MovieList.class));
     }
 
     @Test
@@ -282,7 +282,7 @@ public class ListControllerResilienceRetryTest {
         expectedReturnMovieList.setId(null);
         expectedReturnMovieList.setItems(new ArrayList<>());
 
-        when(movieListQueryService.addList(any(MovieList.class)))
+        when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Persistent failure")); // All calls fail
 
         var requestUrl = "/tmdb/4/list";
@@ -296,7 +296,7 @@ public class ListControllerResilienceRetryTest {
         assertTrue(response.getBody().contains("all retries have exhausted"));
 
         // Verify that the service method was called as per the retry configuration
-        verify(movieListQueryService, times(5)).addList(any(MovieList.class));
+        verify(movieListQueryService, times(5)).createList(any(MovieList.class));
     }
 
     @Test

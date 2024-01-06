@@ -1,11 +1,14 @@
 package clc.resilient.backend.service.data.objects;
 
-import clc.resilient.backend.service.list.validators.ListServiceValidation;
+import clc.resilient.backend.service.list.validators.groups.CreateListValidation;
+import clc.resilient.backend.service.list.validators.groups.ListServiceValidation;
 import clc.resilient.backend.service.list.validators.MovieListConstraint;
+import clc.resilient.backend.service.list.validators.groups.UpdateListValidation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Null;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,6 +25,8 @@ import java.util.List;
 public class MovieList {
     @Id
     @GeneratedValue
+    @Null(groups = CreateListValidation.class)
+    @NotNull(groups = UpdateListValidation.class)
     private Long id;
     @NotNull
     @NotEmpty
