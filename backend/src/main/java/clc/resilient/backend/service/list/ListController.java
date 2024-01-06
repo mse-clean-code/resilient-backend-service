@@ -1,10 +1,10 @@
 package clc.resilient.backend.service.list;
 
-import clc.resilient.backend.service.list.dtos.ResponseDTO;
-import clc.resilient.backend.service.list.dtos.PaginatedResponseDTO;
-import clc.resilient.backend.service.list.service.MovieListQueryService;
 import clc.resilient.backend.service.list.dtos.MediaItemsDTO;
 import clc.resilient.backend.service.list.dtos.MovieListDTO;
+import clc.resilient.backend.service.list.dtos.PaginatedResponseDTO;
+import clc.resilient.backend.service.list.dtos.ResponseDTO;
+import clc.resilient.backend.service.list.services.MovieListService;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -31,11 +31,11 @@ import java.util.concurrent.TimeoutException;
 @RestController
 public class ListController {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private final MovieListQueryService movieListQueryService;
+    private final MovieListService movieListService;
     private final ListMapper mapper;
 
-    public ListController(MovieListQueryService movieListQueryService, ListMapper mapper) {
-        this.movieListQueryService = movieListQueryService;
+    public ListController(MovieListService movieListService, ListMapper mapper) {
+        this.movieListService = movieListService;
         this.mapper = mapper;
     }
 
@@ -50,7 +50,7 @@ public class ListController {
     ) {
         logger.debug("accountLists()");
         return CompletableFuture.supplyAsync(() -> {
-            var lists = movieListQueryService.getAllWithoutItems();
+            var lists = movieListService.getAllWithoutItems();
             var listDtos = mapper.movieListToDto(lists);
             var response = PaginatedResponseDTO.builder()
                 .page(1)
@@ -69,7 +69,7 @@ public class ListController {
         @PathVariable("list_id") @NotNull Long listId
     ) {
         logger.debug("list({})", listId);
-        var list = movieListQueryService.getWithItems(listId);
+        var list = movieListService.getWithItems(listId);
         var listDto = mapper.movieListToDto(list);
         return ResponseEntity.ok(listDto);
     }
@@ -84,7 +84,7 @@ public class ListController {
         logger.debug("createList({})", createListDto);
         return CompletableFuture.supplyAsync(() -> {
             var list = mapper.movieListToEntity(createListDto);
-            list = movieListQueryService.createList(list);
+            list = movieListService.createList(list);
             var listDto = mapper.movieListToDto(list);
             var response = ResponseDTO.builder()
                 .success(true)
@@ -105,7 +105,7 @@ public class ListController {
     ) {
         logger.debug("updateList({}, {})", listId, updateListDto);
         var list = mapper.movieListToEntity(updateListDto);
-        list = movieListQueryService.updateList(list);
+        list = movieListService.updateList(list);
         var listDto = mapper.movieListToDto(list);
         var response = ResponseDTO.builder()
             .success(true)
@@ -123,7 +123,7 @@ public class ListController {
         @PathVariable("list_id") @NotNull Long listId
     ) {
         logger.debug("deleteList({})", listId);
-        movieListQueryService.deleteList(listId);
+        movieListService.deleteList(listId);
         var response = ResponseDTO.builder()
             .success(true)
             .statusMessage("The item/record was deleted successfully.")
@@ -145,7 +145,7 @@ public class ListController {
     ) {
         logger.debug("addItemsToList({}, {})", listId, itemsDto);
         var items = mapper.mediaItemToEntity(itemsDto.getItems());
-        var list = movieListQueryService.addItemsToList(listId, items);
+        var list = movieListService.addItemsToList(listId, items);
         var listDto = mapper.movieListToDto(list);
         var response = ResponseDTO.builder()
             .success(true)
@@ -165,7 +165,7 @@ public class ListController {
     ) {
         logger.debug("removeItemsFromList({}, {})", listId, itemsDto);
         var items = mapper.mediaItemToEntity(itemsDto.getItems());
-        var list = movieListQueryService.removeItemsFromList(listId, items);
+        var list = movieListService.removeItemsFromList(listId, items);
         var listDto = mapper.movieListToDto(list);
         var response = ResponseDTO.builder()
             .success(true)

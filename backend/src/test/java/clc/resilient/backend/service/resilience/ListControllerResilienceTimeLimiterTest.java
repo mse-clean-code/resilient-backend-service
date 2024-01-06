@@ -1,7 +1,7 @@
 package clc.resilient.backend.service.resilience;
 
 import clc.resilient.backend.service.list.entities.MovieList;
-import clc.resilient.backend.service.list.service.MovieListQueryService;
+import clc.resilient.backend.service.list.services.DefaultMovieListService;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
@@ -35,7 +35,7 @@ public class ListControllerResilienceTimeLimiterTest {
     private TestRestTemplate restTemplate;
 
     @MockBean
-    private MovieListQueryService movieListQueryService;
+    private DefaultMovieListService movieListQueryService;
 
     @Test
     public void testAccountLists_TimeLimiter() {

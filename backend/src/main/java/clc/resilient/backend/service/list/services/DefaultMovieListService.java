@@ -1,4 +1,4 @@
-package clc.resilient.backend.service.list.service;
+package clc.resilient.backend.service.list.services;
 
 import clc.resilient.backend.service.list.entities.MediaRelation;
 import clc.resilient.backend.service.list.entities.MovieList;
@@ -22,47 +22,52 @@ import java.util.function.BiConsumer;
 
 @Service
 @Validated
-public class MovieListQueryService {
+public class DefaultMovieListService implements MovieListService {
     private final MovieListRepository movieListRepository;
-
     private final TmdbClient tmdbClient;
-
     private final ObjectMapper objectMapper;
-
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public MovieListQueryService(MovieListRepository movieListRepository, TmdbClient tmdbClient, ObjectMapper objectMapper) {
+    public DefaultMovieListService(MovieListRepository movieListRepository, TmdbClient tmdbClient, ObjectMapper objectMapper) {
         this.movieListRepository = movieListRepository;
         this.tmdbClient = tmdbClient;
         this.objectMapper = objectMapper;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<MovieList> getAllWithoutItems() {
+        logger.debug("getAllWithoutItems");
         return movieListRepository.findAll();
     }
 
+    @Override
     @Transactional(readOnly = true)
     public MovieList getWithItems(@NotNull Long id) {
+        logger.debug("getWithItems({})", id);
         var list = movieListRepository.findById(id).orElseThrow();
         fetchTmdbItems(list);
         return list;
     }
 
+    @Override
     @Transactional
     // Validate with specific group
     // https://reflectoring.io/bean-validation-with-spring-boot/
     // Required so hibernate does not call the @MovieListConstraint!
     @Validated({CreateListValidation.class})
     public MovieList createList(@Valid MovieList addList) {
+        logger.debug("createList({})", addList);
         return movieListRepository.save(addList);
     }
 
+    @Override
     @Transactional
     // @Validated({UpdateListValidation.class})
     // public MovieList updateList(@Valid MovieList updateList) {
     public MovieList updateList(MovieList updateList) {
-        // TODO: Handle not found
+        logger.debug("updateList({})", updateList);
+        // TODO: Exception Handling
         var updateReference = movieListRepository.getReferenceById(updateList.getId());
         if (updateList.getName() != null && !updateList.getName().isEmpty())
             updateReference.setName(updateList.getName());
@@ -75,20 +80,31 @@ public class MovieListQueryService {
         return updateList;
     }
 
+    @Override
     @Transactional
     public void deleteList(@NotNull Long id) {
+        logger.debug("deleteList({})", id);
         movieListRepository.deleteById(id);
     }
 
-
+    @Override
     @Transactional
-    public MovieList addItemsToList(@NotNull Long id, Set<MediaRelation> mediaItems) {
+    public MovieList addItemsToList(
+        @NotNull Long id,
+        @NotNull Set<MediaRelation> mediaItems
+    ) {
+        logger.debug("addItemsToList({}, {})", id, mediaItems);
         // TODO: Validate added items if really exist
         return modifyItemsInList(id, mediaItems, Set::addAll);
     }
 
+    @Override
     @Transactional
-    public MovieList removeItemsFromList(@NotNull Long id, Set<MediaRelation> mediaItems) {
+    public MovieList removeItemsFromList(
+        @NotNull Long id,
+        @NotNull Set<MediaRelation> mediaItems
+    ) {
+        logger.debug("removeItemsFromList({}, {})", id, mediaItems);
         return modifyItemsInList(id, mediaItems, Set::removeAll);
     }
 
@@ -104,23 +120,6 @@ public class MovieListQueryService {
         return list;
     }
 
-    public Set<MediaRelation> deleteMovie(MovieList toDeleteMovie) {
-        Optional<MovieList> optionalItem = movieListRepository.findById(toDeleteMovie.getId());
-        if (optionalItem.isPresent()) {
-            MovieList item = optionalItem.get();
-            Set<MediaRelation> toDeleteMovies = toDeleteMovie.getItems();
-            Set<MediaRelation> movies = item.getItems();
-            movies.removeAll(toDeleteMovies);
-            item.setItems(movies);
-            movieListRepository.saveAndFlush(item);
-            return toDeleteMovie.getItems();
-        } else {
-            // Handle scenario where the item with the provided ID is not found.
-            // You might want to throw an exception or handle it differently.
-            return null;
-        }
-    }
-
     private void fetchTmdbItems(@NotNull MovieList list) {
         for (MediaRelation mediaItem : list.getItems()) {
             fetchTmdbItem(mediaItem);
@@ -128,6 +127,8 @@ public class MovieListQueryService {
     }
 
     private void fetchTmdbItem(@NotNull MediaRelation item) {
+        logger.debug("fetchTmdbItem({})", item);
+
         var id = item.getMediaId();
         var mediaType = item.getMediaType();
 
@@ -143,7 +144,8 @@ public class MovieListQueryService {
             @SuppressWarnings("unchecked")
             var data = (Map<String, Object>) objectMapper.readValue(json, Map.class);
             item.setApiData(data);
-        } catch (JsonProcessingException ex) {
+        } catch (JsonProcessingException | ClassCastException ex) {
+            logger.warn("Could not fetch api data for {} {}", id, mediaType);
             logger.warn("fetchTmdbItem", ex);
         }
     }

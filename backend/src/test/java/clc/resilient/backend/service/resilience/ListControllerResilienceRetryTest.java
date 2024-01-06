@@ -4,7 +4,7 @@ import clc.resilient.backend.service.list.ListResilience;
 import clc.resilient.backend.service.list.dtos.ResponseDTO;
 import clc.resilient.backend.service.list.entities.MovieList;
 import clc.resilient.backend.service.list.entities.MediaRelation;
-import clc.resilient.backend.service.list.service.MovieListQueryService;
+import clc.resilient.backend.service.list.services.DefaultMovieListService;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,7 +41,7 @@ public class ListControllerResilienceRetryTest {
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
     @MockBean
-    private MovieListQueryService movieListQueryService;
+    private DefaultMovieListService movieListQueryService;
 
     @BeforeEach
     public void resetCircuitBreakerRetryAndWiremock() {
@@ -353,10 +353,10 @@ public class ListControllerResilienceRetryTest {
         requestBody.setItems(new HashSet<>());
         Set<MediaRelation> removedMovies = Set.of(new MediaRelation()); // Mock return value from service
 
-        when(movieListQueryService.deleteMovie(any(MovieList.class)))
+        when(movieListQueryService.removeItemsFromList(any(Long.class), any()))
                 .thenThrow(new RuntimeException("Transient failure")) // First two calls fail
                 .thenThrow(new RuntimeException("Transient failure"))
-                .thenReturn(removedMovies);
+                .thenReturn(requestBody);
 
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
         HttpEntity<MovieList> requestEntity = new HttpEntity<>(requestBody);
@@ -370,7 +370,7 @@ public class ListControllerResilienceRetryTest {
         assertNotNull(response.getBody());
 
         // Verify that the service method was called
-        verify(movieListQueryService, times(3)).deleteMovie(any(MovieList.class));
+        verify(movieListQueryService, times(3)).removeItemsFromList(any(Long.class), any());
     }
 
     @Test
@@ -380,7 +380,7 @@ public class ListControllerResilienceRetryTest {
         MovieList requestBody = new MovieList(); // Mock MovieList object for request
         requestBody.setItems(new HashSet<>());
 
-        when(movieListQueryService.deleteMovie(any(MovieList.class)))
+        when(movieListQueryService.removeItemsFromList(any(Long.class), any()))
                 .thenThrow(new RuntimeException("Persistent failure")); // Persistent failure
 
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
@@ -395,6 +395,6 @@ public class ListControllerResilienceRetryTest {
         assertNotNull(response.getBody());
 
         // Verify that the service method was called
-        verify(movieListQueryService, times(5)).deleteMovie(any(MovieList.class));
+        verify(movieListQueryService, times(5)).removeItemsFromList(any(Long.class), any());
     }
 }

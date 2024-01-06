@@ -2,7 +2,7 @@ package clc.resilient.backend.service.resilience;
 
 import clc.resilient.backend.service.list.ListResilience;
 import clc.resilient.backend.service.list.entities.MovieList;
-import clc.resilient.backend.service.list.service.MovieListQueryService;
+import clc.resilient.backend.service.list.services.DefaultMovieListService;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -43,7 +43,7 @@ public class ListControllerResilienceCircuitBreakerTest {
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
     @MockBean
-    private MovieListQueryService movieListQueryService;
+    private DefaultMovieListService movieListQueryService;
 
     @BeforeEach
     public void resetCircuitBreakerRetryAndWiremock() {
@@ -260,7 +260,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         requestBody.setItems(new HashSet<>());
 
         // Simulate failure in the service method
-        when(movieListQueryService.deleteMovie(any(MovieList.class)))
+        when(movieListQueryService.removeItemsFromList(any(Long.class), any()))
                 .thenThrow(new RuntimeException("Service failure")); // Persistent failure
 
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
@@ -281,6 +281,6 @@ public class ListControllerResilienceCircuitBreakerTest {
         });
 
         // Verify that the service method was called as expected
-        verify(movieListQueryService, times(5*5)).deleteMovie(any(MovieList.class));
+        verify(movieListQueryService, times(5*5)).removeItemsFromList(any(Long.class), any());
     }
 }

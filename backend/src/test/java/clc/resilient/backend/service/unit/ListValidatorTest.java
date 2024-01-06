@@ -1,7 +1,7 @@
 package clc.resilient.backend.service.unit;
 
 import clc.resilient.backend.service.list.entities.MovieList;
-import clc.resilient.backend.service.list.service.MovieListQueryService;
+import clc.resilient.backend.service.list.services.DefaultMovieListService;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ListValidatorTest {
 
     @Autowired
-    private MovieListQueryService service;
+    private DefaultMovieListService service;
 
     @Test
     void create_list_fail_name_null() {
