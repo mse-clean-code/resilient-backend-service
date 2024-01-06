@@ -65,7 +65,8 @@ public class ListTests {
 
     @Test
     void get_list() {
-        var listId = addList();
+        var addListResult = addList();
+        var listId = addListResult.id();
         var requestUrl = "/tmdb/4/list/" + listId;
 
         var list = restTemplate
@@ -100,7 +101,8 @@ public class ListTests {
 
     @Test
     void update_list() {
-        var listId = addList();
+        var addListResult = addList();
+        var listId = addListResult.id();
         var requestUrl = "/tmdb/4/list/" + listId;
         var updateRequest = MovieListDTO.builder()
             .id(listId)
@@ -124,7 +126,8 @@ public class ListTests {
 
     @Test
     void delete_list() {
-        var listId = addList();
+        var addListResult = addList();
+        var listId = addListResult.id();
         var requestUrl = "/tmdb/4/" + listId;
 
         var response = restTemplate
@@ -138,7 +141,8 @@ public class ListTests {
 
     @Test
     void add_items() {
-        var listId = addList();
+        var addListResult = addListWithoutItems();
+        var listId = addListResult.id();
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
         var addRequest = new MediaItemsDTO();
         addRequest.setItems(List.of(
@@ -161,7 +165,8 @@ public class ListTests {
 
     @Test
     void remove_items() {
-        var listId = addList();
+        var addListResult = addList();
+        var listId = addListResult.id();
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
         var removeRequest = new MediaItemsDTO();
         removeRequest.setItems(List.of(
@@ -183,7 +188,15 @@ public class ListTests {
 
     public record AddListResult(Long id, MovieListDTO list) {}
 
-    private Long addList() {
+    private AddListResult addListWithoutItems() {
+        return addList(false);
+    }
+
+    private AddListResult addList() {
+        return addList(true);
+    }
+
+    private AddListResult addList(boolean withItems) {
         var requestUrl = "/tmdb/4/list";
         var createRequest = MovieListDTO.builder()
             .description("Hey!")
@@ -192,8 +205,11 @@ public class ListTests {
             .build();
         var response = restTemplate
             .postForObject(requestUrl, createRequest, ResponseMessage.class);
-
         var listId = response.getId();
+
+        if (!withItems)
+            return new AddListResult(listId, response.getMovieListDTO());
+
         requestUrl = "/tmdb/4/list/" + listId + "/items";
         var addRequest = new MediaItemsDTO();
         addRequest.setItems(List.of(
@@ -205,10 +221,7 @@ public class ListTests {
         response = restTemplate
             .postForObject(requestUrl, addRequest, ResponseMessage.class);
 
-        return listId;
+        return new AddListResult(listId, response.getMovieListDTO());
     }
 
-    private <T> T extractResult(ResponseMessage response, Class<T> clazz) {
-        return mapper.convertValue(response.getResults().get(0), clazz);
-    }
 }
