@@ -57,7 +57,8 @@ public class ListTests {
             .postForObject(requestUrl, createRequest, ResponseMessage.class);
 
         assertEquals(response.getSuccess(), true);
-        var createdList = extractResult(response, MovieListDTO.class);
+
+        var createdList = response.getMovieListDTO();
         assertEquals(createRequest.getDescription(), createdList.getDescription());
         assertEquals(createRequest.getName(), createdList.getName());
         assertEquals(createRequest.isPrivate(), createdList.isPrivate());
@@ -81,7 +82,7 @@ public class ListTests {
 
         assertNotNull(response);
         assertEquals(response.getSuccess(), true);
-        var updatedList = extractResult(response, MovieListDTO.class);
+        var updatedList = response.getMovieListDTO();
         assertEquals(updateRequest.getDescription(), updatedList.getDescription());
         assertEquals(updateRequest.getName(), updatedList.getName());
         assertEquals(updateRequest.isPrivate(), updatedList.isPrivate());

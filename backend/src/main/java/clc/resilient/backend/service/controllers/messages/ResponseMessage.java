@@ -1,6 +1,9 @@
 package clc.resilient.backend.service.controllers.messages;
 
+import clc.resilient.backend.service.list.dtos.MovieListDTO;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import lombok.*;
 
 import java.util.List;
@@ -23,4 +26,7 @@ public class ResponseMessage {
 
     List<Object> results;
 
+    @JsonUnwrapped
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    MovieListDTO movieListDTO;
 }

@@ -22,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -86,7 +87,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         Long listId = 0L;
 
         MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
-        expectedReturnMovieList.setItems(new ArrayList<>());
+        expectedReturnMovieList.setItems(new HashSet<>());
 
         // Simulate failure in the service method
         when(movieListQueryService.createList(any(MovieList.class)))
@@ -118,7 +119,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         Long listId = 0L;
 
         MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
-        expectedReturnMovieList.setItems(new ArrayList<>());
+        expectedReturnMovieList.setItems(new HashSet<>());
 
         // Simulate failure in the service method
         when(movieListQueryService.createList(any(MovieList.class)))
@@ -176,7 +177,7 @@ public class ListControllerResilienceCircuitBreakerTest {
     void testCreateList_CircuitBreaker() {
         // Given
         MovieList movieList = new MovieList(); // Create a mock MovieList object for request
-        movieList.setItems(new ArrayList<>());
+        movieList.setItems(new HashSet<>());
 
         // Simulate failure in the service method
         when(movieListQueryService.createList(any(MovieList.class)))
@@ -204,7 +205,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         // Given
         MovieList expectedReturnMovieList = new MovieList(); // Create a mock MovieList object for request
         expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new ArrayList<>());
+        expectedReturnMovieList.setItems(new HashSet<>());
 
         when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Persistent failure")); // All calls fail
@@ -257,7 +258,7 @@ public class ListControllerResilienceCircuitBreakerTest {
         // Given
         Long listId = 0L;
         MovieList requestBody = new MovieList(); // Mock MovieList object for request
-        requestBody.setItems(new ArrayList<>());
+        requestBody.setItems(new HashSet<>());
 
         // Simulate failure in the service method
         when(movieListQueryService.deleteMovie(any(MovieList.class)))

@@ -21,9 +21,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -107,7 +105,7 @@ public class ListControllerResilienceRetryTest {
 
         MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
         expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new ArrayList<>());
+        expectedReturnMovieList.setItems(new HashSet<>());
 
         when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
@@ -133,7 +131,7 @@ public class ListControllerResilienceRetryTest {
 
         MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
         expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new ArrayList<>());
+        expectedReturnMovieList.setItems(new HashSet<>());
 
         when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Persistent failure")); // First call fails
@@ -158,7 +156,7 @@ public class ListControllerResilienceRetryTest {
 
         MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
         expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new ArrayList<>());
+        expectedReturnMovieList.setItems(new HashSet<>());
 
         when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
@@ -186,7 +184,7 @@ public class ListControllerResilienceRetryTest {
 
         MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
         expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new ArrayList<>());
+        expectedReturnMovieList.setItems(new HashSet<>());
 
         when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Persistent failure")); // First call fails
@@ -254,7 +252,7 @@ public class ListControllerResilienceRetryTest {
         // Given
         MovieList expectedReturnMovieList = new MovieList(); // Mocked return value from service
         expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new ArrayList<>());
+        expectedReturnMovieList.setItems(new HashSet<>());
 
         when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Transient failure")) // First two calls fail
@@ -280,7 +278,7 @@ public class ListControllerResilienceRetryTest {
         // Given
         MovieList expectedReturnMovieList = new MovieList(); // Create a mock MovieList object for request
         expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new ArrayList<>());
+        expectedReturnMovieList.setItems(new HashSet<>());
 
         when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Persistent failure")); // All calls fail
@@ -353,8 +351,8 @@ public class ListControllerResilienceRetryTest {
         // Given
         int listId = 1;
         MovieList requestBody = new MovieList(); // Mock MovieList object for request
-        requestBody.setItems(new ArrayList<>());
-        List<MovieRelation> removedMovies = List.of(new MovieRelation()); // Mock return value from service
+        requestBody.setItems(new HashSet<>());
+        Set<MovieRelation> removedMovies = Set.of(new MovieRelation()); // Mock return value from service
 
         when(movieListQueryService.deleteMovie(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Transient failure")) // First two calls fail
@@ -381,7 +379,7 @@ public class ListControllerResilienceRetryTest {
         // Given
         int listId = 1;
         MovieList requestBody = new MovieList(); // Mock MovieList object for request
-        requestBody.setItems(new ArrayList<>());
+        requestBody.setItems(new HashSet<>());
 
         when(movieListQueryService.deleteMovie(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Persistent failure")); // Persistent failure

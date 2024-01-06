@@ -18,6 +18,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -66,7 +67,7 @@ public class ListControllerResilienceTimeLimiterTest {
     @Test
     public void testCreateList_TimeLimiter() {
         MovieList expectedReturnMovieList = new MovieList();
-        expectedReturnMovieList.setItems(new ArrayList<>());
+        expectedReturnMovieList.setItems(new HashSet<>());
 
         // Simulate a delay that exceeds the time limit
         when(movieListQueryService.createList(any(MovieList.class))).thenAnswer(invocation -> {

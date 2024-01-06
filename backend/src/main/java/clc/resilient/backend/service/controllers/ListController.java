@@ -63,7 +63,7 @@ public class ListController {
                 .success(true)
                 .statusMessage("The item/record was created successfully.")
                 .id(listDto.getId())
-                .results(Collections.singletonList(listDto))
+                .movieListDTO(listDto)
                 .build();
             return ResponseEntity.ok(response);
         });
@@ -84,7 +84,7 @@ public class ListController {
             .success(true)
             .statusMessage("The item/record was updated successfully.")
             .id(listDto.getId())
-            .results(Collections.singletonList(listDto))
+            .movieListDTO(listDto)
             .build();
         return ResponseEntity.ok(response);
     }
