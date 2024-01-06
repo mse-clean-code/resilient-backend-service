@@ -1,5 +1,7 @@
 package clc.resilient.backend.service.data.objects;
 
+import clc.resilient.backend.service.list.validators.ListServiceValidation;
+import clc.resilient.backend.service.list.validators.MovieListConstraint;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
@@ -16,6 +18,7 @@ import java.util.List;
 @Table(name = "movie_list")
 @Getter
 @Setter
+@MovieListConstraint(groups = ListServiceValidation.class)
 public class MovieList {
     @Id
     @GeneratedValue

@@ -4,7 +4,10 @@ import clc.resilient.backend.service.data.objects.MovieList;
 import clc.resilient.backend.service.data.objects.MovieRelation;
 import clc.resilient.backend.service.data.repositories.MovieListRepository;
 import clc.resilient.backend.service.data.repositories.MovieRelationRepository;
+import clc.resilient.backend.service.list.validators.ListServiceValidation;
+import clc.resilient.backend.service.list.validators.MovieListValidator;
 import jakarta.validation.Valid;
+import jakarta.validation.groups.Default;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -36,6 +39,10 @@ public class MovieListQueryService {
     }
 
     @Transactional
+    // Validate with specific group
+    // https://reflectoring.io/bean-validation-with-spring-boot/
+    // Required so hibernate does not call the @MovieListConstraint!
+    @Validated({ListServiceValidation.class, Default.class})
     public MovieList add(@Valid MovieList addList) {
         return movieListRepository.save(addList);
     }
