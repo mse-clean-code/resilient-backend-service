@@ -23,16 +23,21 @@ public class ListValidatorTest {
     @Autowired
     private DefaultMovieListService service;
 
+    // Even though these are unit tests we need spring
+    // as the validator is managed by the framework.
+    // Controllers/Services are decorated with corresponding validation calls
+    // that also consider validation groups.
+
     @Test
     void create_list_fail_name_null() {
         var list = new MovieList();
         list.setName(null);
 
-        assertThrows(ConstraintViolationException.class, () -> {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
             service.createList(list);
         });
 
-        // TODO: Check exception message?
+        assertTrue(() -> ex.getMessage().contains("createList.addList.name"));
     }
 
     @Test
@@ -40,9 +45,11 @@ public class ListValidatorTest {
         var list = new MovieList();
         list.setName("");
 
-        assertThrows(ConstraintViolationException.class, () -> {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
             service.createList(list);
         });
+
+        assertTrue(() -> ex.getMessage().contains("createList.addList.name"));
     }
 
     @Test
@@ -50,9 +57,11 @@ public class ListValidatorTest {
         var list = new MovieList();
         list.setId(42L);
 
-        assertThrows(ConstraintViolationException.class, () -> {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
             service.createList(list);
         });
+
+        assertTrue(() -> ex.getMessage().contains("createList.addList.name"));
     }
 
     @Test
@@ -60,9 +69,11 @@ public class ListValidatorTest {
         var list = new MovieList();
         list.setId(null);
 
-        assertThrows(ConstraintViolationException.class, () -> {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
             service.updateList(list);
         });
+
+        assertTrue(() -> ex.getMessage().contains("updateList.updateList.id"));
     }
 
     @Test
@@ -84,7 +95,7 @@ public class ListValidatorTest {
 
     @Test
     void update_list_fail_movie_id_doesnt_exists() {
-        assertThrows(ConstraintViolationException.class, () -> {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
             var list = new MovieList();
             list.setName("List with movies");
             list = service.createList(list);
@@ -97,11 +108,13 @@ public class ListValidatorTest {
             movies.add(nonExistentMediaRelation);
             service.addItemsToList(list.getId(), movies);
         });
+
+        assertTrue(() -> ex.getMessage().contains("No such movie/tv"));
     }
 
     @Test
     void update_list_fail_movie_id_might_not_exists() {
-        assertThrows(ConstraintViolationException.class, () -> {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
             var list = new MovieList();
             list.setName("List with movies");
             list = service.createList(list);
@@ -114,5 +127,7 @@ public class ListValidatorTest {
             movies.add(nonExistentMediaRelation);
             service.addItemsToList(list.getId(), movies);
         });
+
+        assertTrue(() -> ex.getMessage().contains("No such movie/tv"));
     }
 }
