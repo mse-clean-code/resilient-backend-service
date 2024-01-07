@@ -1,6 +1,5 @@
 package clc.resilient.backend.service.list.dtos;
 
-import clc.resilient.backend.service.list.dtos.MovieListDTO;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
