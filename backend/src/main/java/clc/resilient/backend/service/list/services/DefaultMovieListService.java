@@ -7,6 +7,7 @@ import clc.resilient.backend.service.list.repositories.MovieListRepository;
 import clc.resilient.backend.service.list.validators.groups.CreateListValidation;
 import clc.resilient.backend.service.list.validators.groups.ListServiceValidation;
 import clc.resilient.backend.service.list.validators.groups.UpdateListValidation;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
@@ -42,7 +43,8 @@ public class DefaultMovieListService implements MovieListService {
     @Transactional(readOnly = true)
     public MovieList getWithItems(@NotNull Long id) {
         logger.debug("getWithItems({})", id);
-        var list = movieListRepository.findById(id).orElseThrow();
+        var list = movieListRepository.findById(id).
+            orElseThrow(EntityNotFoundException::new);
         fetchTmdbItems(list);
         return list;
     }
@@ -109,7 +111,8 @@ public class DefaultMovieListService implements MovieListService {
         BiConsumer<Set<MediaRelation>, Set<MediaRelation>> operation
     ) {
         // TODO: Exception handling
-        var list = movieListRepository.findById(id).orElseThrow();
+        var list = movieListRepository.findById(id)
+            .orElseThrow(EntityNotFoundException::new);
         operation.accept(list.getItems(), mediaItems);
         list.setNumberOfItems(list.getItems().size());
         fetchTmdbItems(list);
