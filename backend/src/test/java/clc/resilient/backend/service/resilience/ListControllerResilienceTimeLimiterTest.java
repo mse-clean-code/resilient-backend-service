@@ -1,5 +1,6 @@
 package clc.resilient.backend.service.resilience;
 
+import clc.resilient.backend.service.list.dtos.MovieListDTO;
 import clc.resilient.backend.service.list.entities.MovieList;
 import clc.resilient.backend.service.list.services.DefaultMovieListService;
 import org.junit.jupiter.api.MethodOrderer;
@@ -17,7 +18,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.Collections;
-import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -65,8 +65,7 @@ public class ListControllerResilienceTimeLimiterTest {
 
     @Test
     public void testCreateList_TimeLimiter() {
-        MovieList expectedReturnMovieList = new MovieList();
-        expectedReturnMovieList.setItems(new HashSet<>());
+        MovieListDTO movieListDTO = new MovieListDTO(0L, null, null, null, true, null, 0, null);
 
         // Simulate a delay that exceeds the time limit
         when(movieListQueryService.createList(any(MovieList.class))).thenAnswer(invocation -> {
@@ -80,7 +79,7 @@ public class ListControllerResilienceTimeLimiterTest {
         long startTime = System.currentTimeMillis();
 
         // Perform the request
-        ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, expectedReturnMovieList, String.class);
+        ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, movieListDTO, String.class);
 
         // Capture the end time
         long endTime = System.currentTimeMillis();

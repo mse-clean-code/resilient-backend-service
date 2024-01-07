@@ -1,6 +1,11 @@
 package clc.resilient.backend.service.resilience;
 
+import clc.resilient.backend.service.list.ListMapper;
 import clc.resilient.backend.service.list.ListResilience;
+import clc.resilient.backend.service.list.dtos.MediaItemDTO;
+import clc.resilient.backend.service.list.dtos.MediaItemsDTO;
+import clc.resilient.backend.service.list.dtos.MovieListDTO;
+import clc.resilient.backend.service.list.entities.MediaRelation;
 import clc.resilient.backend.service.list.entities.MovieList;
 import clc.resilient.backend.service.list.services.DefaultMovieListService;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -21,12 +26,9 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.util.HashSet;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(SpringExtension.class)
@@ -44,6 +46,9 @@ public class ListControllerResilienceCircuitBreakerTest {
 
     @MockBean
     private DefaultMovieListService movieListQueryService;
+
+    @MockBean
+    private ListMapper mapper;
 
     @BeforeEach
     public void resetCircuitBreakerRetryAndWiremock() {
@@ -66,14 +71,12 @@ public class ListControllerResilienceCircuitBreakerTest {
         IntStream.rangeClosed(1, 5).forEach(i -> {
             ResponseEntity<String> response = restTemplate.getForEntity(requestUrl, String.class);
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-            // Check the specific body message for retry
         });
         System.out.println("Next 5 calls should not be called since circuitbreaker is open");
         // Next 5 calls - Circuit breaker responses
         IntStream.rangeClosed(1, 5).forEach(i -> {
             ResponseEntity<String> response = restTemplate.getForEntity(requestUrl, String.class);
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-            // Check the specific body message for circuit breaker
         });
 
         // Verify that the service method was called as expected
@@ -83,49 +86,52 @@ public class ListControllerResilienceCircuitBreakerTest {
     @Test
     void testAddItemToList_CircuitBreaker() {
         // Given
-        Long listId = 0L;
+        long listId = 0L;
 
-        MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
-        expectedReturnMovieList.setItems(new HashSet<>());
+        MediaItemsDTO itemsDTO = new MediaItemsDTO();
 
         // Simulate failure in the service method
-        when(movieListQueryService.createList(any(MovieList.class)))
+        when(movieListQueryService.addItemsToList(any(Long.class), anySet()))
                 .thenThrow(new RuntimeException("Service failure"));
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
 
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
 
         // First 5 calls - Retry responses
         IntStream.rangeClosed(1, 5).forEach(i -> {
-            ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, expectedReturnMovieList, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, itemsDTO, String.class);
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-            // Check the specific body message for retry
         });
         System.out.println("Next 5 calls should not be called since circuitbreaker is open");
         // Next 5 calls - Circuit breaker responses
         IntStream.rangeClosed(1, 5).forEach(i -> {
-            ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, expectedReturnMovieList, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, itemsDTO, String.class);
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-            // Check the specific body message for circuit breaker
         });
 
         // Verify that the service method was called as expected
-        verify(movieListQueryService, times(5*5)).createList(any(MovieList.class));
+        verify(movieListQueryService, times(5*5)).addItemsToList(any(Long.class), anySet());
     }
 
     @Test
-    void testUpdateItem_CircuitBreaker() {
+    void testUpdateList_CircuitBreaker() {
         // Given
-        Long listId = 0L;
+        long listId = 0L;
 
-        MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
-        expectedReturnMovieList.setItems(new HashSet<>());
+        MovieListDTO movieListDTO = new MovieListDTO(0L, null, null, null, true, null, 0, null);
 
+        when(mapper.movieListToEntity(any(MovieListDTO.class)))
+                .thenReturn(new MovieList());
         // Simulate failure in the service method
-        when(movieListQueryService.createList(any(MovieList.class)))
+        when(movieListQueryService.updateList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Service failure"));
 
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
+
         var requestUrl = "/tmdb/4/list/" + listId;
-        HttpEntity<MovieList> requestEntity = new HttpEntity<>(expectedReturnMovieList);
+        HttpEntity<MovieListDTO> requestEntity = new HttpEntity<>(movieListDTO);
 
         // First 5 calls - Retry responses
         IntStream.rangeClosed(1, 5).forEach(i -> {
@@ -142,13 +148,13 @@ public class ListControllerResilienceCircuitBreakerTest {
         });
 
         // Verify that the service method was called as expected
-        verify(movieListQueryService, times(5*5)).createList(any(MovieList.class));
+        verify(movieListQueryService, times(5*5)).updateList(any(MovieList.class));
     }
 
     @Test
     void testGetListDetails_CircuitBreaker() {
         // Given
-        Long listId = 0L;
+        long listId = 0L;
 
         // Simulate failure in the service method
         when(movieListQueryService.getWithItems(listId))
@@ -175,24 +181,27 @@ public class ListControllerResilienceCircuitBreakerTest {
     @Test
     void testCreateList_CircuitBreaker() {
         // Given
-        MovieList movieList = new MovieList(); // Create a mock MovieList object for request
-        movieList.setItems(new HashSet<>());
+        MovieListDTO movieListDTO = new MovieListDTO(0L, null, null, null, true, null, 0, null);
 
+        when(mapper.movieListToEntity(any(MovieListDTO.class)))
+                .thenReturn(new MovieList());
         // Simulate failure in the service method
         when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Service failure"));
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
 
         var requestUrl = "/tmdb/4/list";
 
         // First 5 calls - Retry responses
         IntStream.rangeClosed(1, 5).forEach(i -> {
-            ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, movieList, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, movieListDTO, String.class);
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         });
         System.out.println("Next 5 calls should not be called since circuitbreaker is open");
         // Next 5 calls - Circuit breaker responses
         IntStream.rangeClosed(1, 5).forEach(i -> {
-            ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, movieList, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(requestUrl, movieListDTO, String.class);
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         });
 
@@ -200,32 +209,10 @@ public class ListControllerResilienceCircuitBreakerTest {
         verify(movieListQueryService, times(5*5)).createList(any(MovieList.class));
     }
 
-    void testCreateList_Retry_Failure() {
-        // Given
-        MovieList expectedReturnMovieList = new MovieList(); // Create a mock MovieList object for request
-        expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new HashSet<>());
-
-        when(movieListQueryService.createList(any(MovieList.class)))
-                .thenThrow(new RuntimeException("Persistent failure")); // All calls fail
-
-        var requestUrl = "/tmdb/4/list";
-
-        // When
-        var response = restTemplate.postForEntity(requestUrl, expectedReturnMovieList, String.class);
-
-        // Then
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertNotNull(response.getBody());
-        assertTrue(response.getBody().contains("all retries have exhausted"));
-
-        // Verify that the service method was called as per the retry configuration
-        verify(movieListQueryService, times(5)).createList(any(MovieList.class));
-    }
     @Test
     void testDeleteList_CircuitBreaker() {
         // Given
-        Long listId = 0L;
+        long listId = 0L;
 
         // Simulate failure in the service method
         doThrow(new RuntimeException("Service failure"))
@@ -255,16 +242,20 @@ public class ListControllerResilienceCircuitBreakerTest {
     @Test
     void testRemoveItemFromList_CircuitBreaker() {
         // Given
-        Long listId = 0L;
-        MovieList requestBody = new MovieList(); // Mock MovieList object for request
-        requestBody.setItems(new HashSet<>());
+        long listId = 0L;
 
+        MediaItemsDTO itemsDTO = new MediaItemsDTO();
+
+        when(mapper.mediaItemToEntity(any(MediaItemDTO.class)))
+                .thenReturn(new MediaRelation());
         // Simulate failure in the service method
         when(movieListQueryService.removeItemsFromList(any(Long.class), any()))
                 .thenThrow(new RuntimeException("Service failure")); // Persistent failure
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
 
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
-        HttpEntity<MovieList> requestEntity = new HttpEntity<>(requestBody);
+        HttpEntity<MediaItemsDTO> requestEntity = new HttpEntity<>(itemsDTO);
 
         // First 5 calls - Retry responses
         IntStream.rangeClosed(1, 5).forEach(i -> {

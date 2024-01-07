@@ -1,6 +1,10 @@
 package clc.resilient.backend.service.resilience;
 
+import clc.resilient.backend.service.list.ListMapper;
 import clc.resilient.backend.service.list.ListResilience;
+import clc.resilient.backend.service.list.dtos.MediaItemDTO;
+import clc.resilient.backend.service.list.dtos.MediaItemsDTO;
+import clc.resilient.backend.service.list.dtos.MovieListDTO;
 import clc.resilient.backend.service.list.dtos.ResponseDTO;
 import clc.resilient.backend.service.list.entities.MovieList;
 import clc.resilient.backend.service.list.entities.MediaRelation;
@@ -42,6 +46,8 @@ public class ListControllerResilienceRetryTest {
 
     @MockBean
     private DefaultMovieListService movieListQueryService;
+    @MockBean
+    private ListMapper mapper;
 
     @BeforeEach
     public void resetCircuitBreakerRetryAndWiremock() {
@@ -100,70 +106,78 @@ public class ListControllerResilienceRetryTest {
     @Test
     void testAddItemToList_Retry_Success() {
         // Given
-        Long listId = 0L;
+        long listId = 0L;
 
-        MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
-        expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new HashSet<>());
+        MediaItemsDTO itemsDTO = new MediaItemsDTO();
 
-        when(movieListQueryService.createList(any(MovieList.class)))
+        MovieList expectedMovieList = new MovieList();
+        expectedMovieList.setId(listId);
+        expectedMovieList.setItems(new HashSet<>());
+
+        when(movieListQueryService.addItemsToList(eq(listId), anySet()))
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
-                .thenThrow(new RuntimeException("Transient failure")) // First call fails
-                .thenReturn(new MovieList()); // Subsequent calls succeed
+                .thenThrow(new RuntimeException("Transient failure")) // Second call fails
+                .thenReturn(expectedMovieList); // Subsequent calls succeed
+
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
 
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
 
         // When
-        var response = restTemplate.postForEntity(requestUrl, expectedReturnMovieList, String.class);
+        var response = restTemplate.postForEntity(requestUrl, itemsDTO, String.class);
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertNotNull(response.getBody());
-        // Verify that the service method was called twice (one failure, one success)
-        verify(movieListQueryService, times(3)).createList(any(MovieList.class));
+        // Verify that the service method was called 3 times (2 failure, one success)
+        verify(movieListQueryService, times(3)).addItemsToList(eq(listId), anySet());
     }
 
     @Test
     void testAddItemToList_Retry_Failure() {
         // Given
-        Long listId = 0L;
+        long listId = 0L;
 
-        MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
-        expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new HashSet<>());
+        MediaItemsDTO itemsDTO = new MediaItemsDTO();
 
-        when(movieListQueryService.createList(any(MovieList.class)))
-                .thenThrow(new RuntimeException("Persistent failure")); // First call fails
+        when(movieListQueryService.addItemsToList(any(), any()))
+                .thenThrow(new RuntimeException("Persistent failure"));
 
+        when(mapper.movieListToDto(any(MovieList.class))).thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
 
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
 
         // When
-        var response = restTemplate.postForEntity(requestUrl, expectedReturnMovieList, String.class);
+        var response = restTemplate.postForEntity(requestUrl, itemsDTO, String.class);
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertNotNull(response.getBody());
-        // Verify that the service method was called twice (one failure, one success)
-        verify(movieListQueryService, times(5)).createList(any(MovieList.class));
+        // Verify that the service method was called 5 times
+        verify(movieListQueryService, times(5)).addItemsToList(any(), any());
     }
 
     @Test
-    void testUpdateItem_Retry_Success() {
+    void testUpdateList_Retry_Success() {
         // Given
-        Long listId = 0L;
+        long listId = 0L;
 
-        MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
-        expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new HashSet<>());
+        MovieListDTO movieListDTO = new MovieListDTO(0L, null, null, null, true, null, 0, null);
 
-        when(movieListQueryService.createList(any(MovieList.class)))
+        when(mapper.movieListToEntity(any(MovieListDTO.class)))
+                .thenReturn(new MovieList());
+
+        when(movieListQueryService.updateList(any()))
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
-                .thenThrow(new RuntimeException("Transient failure")) // First call fails
+                .thenThrow(new RuntimeException("Transient failure")) // Second call fails
                 .thenReturn(new MovieList()); // Subsequent calls succeed
 
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
+
         var requestUrl = "/tmdb/4/list/" + listId;
-        HttpEntity<MovieList> requestEntity = new HttpEntity<>(expectedReturnMovieList);
+        HttpEntity<MovieListDTO> requestEntity = new HttpEntity<>(movieListDTO);
 
         // When
         ResponseEntity<String> response = restTemplate.exchange(
@@ -172,25 +186,26 @@ public class ListControllerResilienceRetryTest {
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertNotNull(response.getBody());
-        // Verify that the service method was called twice (one failure, one success)
-        verify(movieListQueryService, times(3)).createList(any(MovieList.class));
+        // Verify that the service method was called 3 times (2 failure, one success)
+        verify(movieListQueryService, times(3)).updateList(any(MovieList.class));
     }
 
     @Test
-    void testUpdateItem_Retry_Failure() {
+    void testUpdateList_Retry_Failure() {
         // Given
-        Long listId = 0L;
+        long listId = 0L;
 
-        MovieList expectedReturnMovieList = new MovieList(); // Mocked return value
-        expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new HashSet<>());
+        MovieListDTO movieListDTO = new MovieListDTO(0L, null, null, null, true, null, 0, null);
 
-        when(movieListQueryService.createList(any(MovieList.class)))
-                .thenThrow(new RuntimeException("Persistent failure")); // First call fails
-
+        when(mapper.movieListToEntity(any(MovieListDTO.class)))
+                .thenReturn(new MovieList());
+        when(movieListQueryService.updateList(any(MovieList.class)))
+                .thenThrow(new RuntimeException("Persistent failure"));
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
 
         var requestUrl = "/tmdb/4/list/" + listId;
-        HttpEntity<MovieList> requestEntity = new HttpEntity<>(expectedReturnMovieList);
+        HttpEntity<MovieListDTO> requestEntity = new HttpEntity<>(movieListDTO);
 
 
         // When
@@ -200,14 +215,15 @@ public class ListControllerResilienceRetryTest {
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertNotNull(response.getBody());
-        // Verify that the service method was called twice (one failure, one success)
-        verify(movieListQueryService, times(5)).createList(any(MovieList.class));
+        // Verify that the service method was called 3 times (one failure, one success)
+        verify(movieListQueryService, times(5)).updateList(any(MovieList.class));
     }
 
     @Test
     void testGetListDetails_Retry_Success() {
         // Given
-        Long listId = 1L;
+        long listId = 1L;
+
         when(movieListQueryService.getWithItems(listId))
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
                 .thenThrow(new RuntimeException("Transient failure")) // First call fails
@@ -219,9 +235,7 @@ public class ListControllerResilienceRetryTest {
         var response = restTemplate.getForEntity(requestUrl, MovieList.class);
 
         // Then
-        // TODO the status code is 500 internal server error altough we return a MovieList which should return 200ok
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertNotNull(response.getBody());
         // Verify that the service method was called twice (one failure, one success)
         verify(movieListQueryService, times(3)).getWithItems(listId);
     }
@@ -229,7 +243,7 @@ public class ListControllerResilienceRetryTest {
     @Test
     void testGetListDetails_Retry_Failure() {
         // Given
-        Long listId = 1L;
+        long listId = 1L;
         when(movieListQueryService.getWithItems(listId))
                 .thenThrow(new RuntimeException("Persistent failure"));
 
@@ -249,19 +263,21 @@ public class ListControllerResilienceRetryTest {
     @Test
     void testCreateList_Retry_Success() {
         // Given
-        MovieList expectedReturnMovieList = new MovieList(); // Mocked return value from service
-        expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new HashSet<>());
+        MovieListDTO movieListDTO = new MovieListDTO(0L, null, null, null, true, null, 0, null);
 
+        when(mapper.movieListToEntity(any(MovieListDTO.class)))
+                .thenReturn(new MovieList());
         when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Transient failure")) // First two calls fail
                 .thenThrow(new RuntimeException("Transient failure"))
                 .thenReturn(new MovieList()); // Third call succeeds
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
 
         var requestUrl = "/tmdb/4/list";
 
         // When
-        var response = restTemplate.postForEntity(requestUrl, expectedReturnMovieList, String.class);
+        var response = restTemplate.postForEntity(requestUrl, movieListDTO, String.class);
 
 
         // Then
@@ -275,17 +291,19 @@ public class ListControllerResilienceRetryTest {
     @Test
     void testCreateList_Retry_Failure() {
         // Given
-        MovieList expectedReturnMovieList = new MovieList(); // Create a mock MovieList object for request
-        expectedReturnMovieList.setId(null);
-        expectedReturnMovieList.setItems(new HashSet<>());
+        MovieListDTO movieListDTO = new MovieListDTO(0L, null, null, null, true, null, 0, null);
 
+        when(mapper.movieListToEntity(any(MovieListDTO.class)))
+                .thenReturn(new MovieList());
         when(movieListQueryService.createList(any(MovieList.class)))
                 .thenThrow(new RuntimeException("Persistent failure")); // All calls fail
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
 
         var requestUrl = "/tmdb/4/list";
 
         // When
-        var response = restTemplate.postForEntity(requestUrl, expectedReturnMovieList, String.class);
+        var response = restTemplate.postForEntity(requestUrl, movieListDTO, String.class);
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
@@ -299,7 +317,7 @@ public class ListControllerResilienceRetryTest {
     @Test
     void testDeleteList_Retry_Success() {
         // Given
-        Long listId = 1L;
+        long listId = 1L;
 
         doThrow(new RuntimeException("Transient failure"))
                 .doThrow(new RuntimeException("Transient failure"))
@@ -324,7 +342,7 @@ public class ListControllerResilienceRetryTest {
     @Test
     void testDeleteList_Retry_Failure() {
         // Given
-        Long listId = 1L;
+        long listId = 1L;
 
         doThrow(new RuntimeException("Persistent failure"))
                 .when(movieListQueryService).deleteList(listId); // All calls throw an exception
@@ -348,18 +366,21 @@ public class ListControllerResilienceRetryTest {
     @Test
     void testRemoveItemFromList_Success() {
         // Given
-        int listId = 1;
-        MovieList requestBody = new MovieList(); // Mock MovieList object for request
-        requestBody.setItems(new HashSet<>());
-        Set<MediaRelation> removedMovies = Set.of(new MediaRelation()); // Mock return value from service
+        long listId = 1L;
 
+        MediaItemsDTO itemsDTO = new MediaItemsDTO();
+
+        when(mapper.mediaItemToEntity(any(MediaItemDTO.class)))
+                .thenReturn(new MediaRelation());
         when(movieListQueryService.removeItemsFromList(any(Long.class), any()))
                 .thenThrow(new RuntimeException("Transient failure")) // First two calls fail
                 .thenThrow(new RuntimeException("Transient failure"))
-                .thenReturn(requestBody);
+                .thenReturn(new MovieList());
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
 
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
-        HttpEntity<MovieList> requestEntity = new HttpEntity<>(requestBody);
+        HttpEntity<MediaItemsDTO> requestEntity = new HttpEntity<>(itemsDTO);
 
         // When
         ResponseEntity<ResponseDTO> response = restTemplate.exchange(
@@ -376,15 +397,18 @@ public class ListControllerResilienceRetryTest {
     @Test
     void testRemoveItemFromList_Failure() {
         // Given
-        int listId = 1;
-        MovieList requestBody = new MovieList(); // Mock MovieList object for request
-        requestBody.setItems(new HashSet<>());
+        long listId = 1L;
+        MediaItemsDTO itemsDTO = new MediaItemsDTO();
 
+        when(mapper.mediaItemToEntity(any(MediaItemDTO.class)))
+                .thenReturn(new MediaRelation());
         when(movieListQueryService.removeItemsFromList(any(Long.class), any()))
                 .thenThrow(new RuntimeException("Persistent failure")); // Persistent failure
+        when(mapper.movieListToDto(any(MovieList.class)))
+                .thenReturn(new MovieListDTO(0L, null, null, null, true, null, 0, null));
 
         var requestUrl = "/tmdb/4/list/" + listId + "/items";
-        HttpEntity<MovieList> requestEntity = new HttpEntity<>(requestBody);
+        HttpEntity<MediaItemsDTO> requestEntity = new HttpEntity<>(itemsDTO);
 
         // When
         ResponseEntity<String> response = restTemplate.exchange(
