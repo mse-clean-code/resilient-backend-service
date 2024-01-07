@@ -1,12 +1,12 @@
 package clc.resilient.backend.service.list.validators;
 
-import clc.resilient.backend.service.common.TmdbClient;
+import clc.resilient.backend.service.common.exceptions.ApiException;
 import clc.resilient.backend.service.list.entities.MediaRelation;
+import clc.resilient.backend.service.list.repositories.MediaDataRepository;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 /**
  * @author Kacper Urbaniec
@@ -14,25 +14,32 @@ import org.slf4j.LoggerFactory;
  */
 
 public class MediaRelationExistsValidator implements ConstraintValidator<MediaRelationExists, MediaRelation> {
+
+    private final MediaDataRepository mediaDataRepository;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final TmdbClient client;
-
-    public MediaRelationExistsValidator(TmdbClient client) {
-        this.client = client;
+    public MediaRelationExistsValidator(MediaDataRepository mediaDataRepository) {
+        this.mediaDataRepository = mediaDataRepository;
     }
 
     @Override
     public boolean isValid(MediaRelation value, ConstraintValidatorContext context) {
         logger.debug("isValid({})", value);
 
-        // TODO: Validate if added items if really exist
-        // Could mimic "fetchTmdbItem" from "DefaultMovieListService"
-        // Also add test case to "ListValidatorTest"!
+        var id = value.getMediaId();
+        var mediaType = value.getMediaType();
 
-        // Exception handling in constraint
-        // https://www.baeldung.com/spring-mvc-custom-validator#2-creating-the-validator
-
-        return true;
+        try {
+            var movieFound = mediaDataRepository.existsByIdAndMediaType(id, mediaType);
+            logger.debug("Media exists: {} {}? {}", id, mediaType, movieFound);
+            return movieFound;
+        } catch (ApiException ex) {
+            logger.warn("Could not fetch api data for {} {}", id, mediaType);
+            logger.warn("isValid", ex);
+        } catch (Exception ex) {
+            logger.warn("Unknown error");
+            logger.warn("isValid", ex);
+        }
+        return false;
     }
 }

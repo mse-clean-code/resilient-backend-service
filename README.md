@@ -10,6 +10,22 @@ cd backend
 ```
 
 > OpenAPI Specification can be found under http://localhost:8080/swagger-ui/index.html
+>
+> Select the `TMDBv4` definition to test out the list feature!
+
+> Use environment `spring.profiles.active=datagen` to perform simple data generation
+
+Unit & Integration Tests can be run via
+
+```bash
+./gradlew test
+```
+
+Resilience Tests can be run via
+
+```bash
+./gradlew resilienceTest
+```
 
 ### Frontend
 
@@ -28,6 +44,8 @@ npm install
 npm run start
 ```
 
+![image-20240107201414167](.img/frontend.png)
+
 ## 🧑‍💻 Architecture
 
 Our application is underpinned by a Spring Boot backend, structured using a package-by-feature approach. This
@@ -40,15 +58,27 @@ use of springdoc, which manages our OAS/Swagger definitions.
 
 In our architectural narrative, we play the role of a proxy, channeling all API calls from our backend to `tmdb`, with a
 special twist on the list feature. We recognize `tmdb` as an external API that, while generally reliable, occasionally
-presents challenges that require resilient solutions. Our list feature stands out by offering robust CRUD (Create, Read,
+presents challenges that require resilient solutions. Our custom list feature stands out by offering robust CRUD (Create, Read,
 Update, Delete) operations, bolstered with thorough input validation.
-
-We currently showcase two primary features: `proxy` and `list`. The `proxy` feature acts as our gateway to `tmdb`,
-facilitating calls to both v3/v4 API methods and a separate endpoint for image-related interactions, acknowledging the
-unique requirements of this media type.
 
 In essence, our architecture is designed not just for efficiency and reliability, but also for adaptability, ensuring a
 smooth and responsive experience for users and developers alike.
+
+### Clean Code Considerations
+
+* **Single Responsibility Principle**: Each class has a specific role, such as DTOs for data transfer, entities for domain models, repositories for data access, services for business logic, and controllers for request handling. For instance, `MovieListDTO` deals strictly with the data transfer object structure for movie lists.
+* **Open/Closed Principle**: The use of interfaces for services and repositories indicates an intent to make components extendable without modification. For example, `MovieListService` could be implemented by different concrete classes without changing the clients that depend on the interface.
+* **Liskov Substitution Principle**: The clear interface definitions suggest that any implementation can be substituted without affecting the correctness of the program.
+* **Interface Segregation Principle**: The segregation into various interfaces like `MediaDataRepository` and `MovieListRepository` means that clients will not be forced to depend on interfaces they do not use.
+* **Dependency Inversion Principle**: Dependency inversion is practiced through the use of constructor injection, which is preferred over field injection (e.g., with the `@Autowired` annotation). This allows for more testable and maintainable code, as dependencies are more explicit and mapped fields can utilize the `final` modifier.
+
+Other notable clean coding practices include:
+
+- **Package by Feature**: The organization of the project  into packages by feature simplifies navigation and enhances modularity.  This structure allows developers to easily locate and work on different  aspects of the application without cross-contaminating concerns, leading to a more intuitive and maintainable codebase.
+- **Layered architecture**: Each layer knows only about its layer or the one below it, ensuring a separation of concerns.
+- **Data Transfer Objects (DTOs)**: Used for all API interactions, separating internal entities from what is exposed through the API.
+- **Validation**: Leveraging Spring's validation mechanism, which provides a declarative way to add validation logic.
+- **Exception handling**: Utilizing resilience patterns with libraries like Resilience4j and custom methods like `catchValidationAndNotFoundEx` to handle exceptions that should not be further propagated to Resilience4j fallbacks like `ConstraintViolationExceptions`.
 
 ### Resilience4J Circuit Breaker Configuration for TMDB Proxy Endpoints
 

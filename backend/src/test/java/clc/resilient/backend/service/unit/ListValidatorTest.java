@@ -1,5 +1,6 @@
 package clc.resilient.backend.service.unit;
 
+import clc.resilient.backend.service.list.entities.MediaRelation;
 import clc.resilient.backend.service.list.entities.MovieList;
 import clc.resilient.backend.service.list.services.DefaultMovieListService;
 import jakarta.validation.ConstraintViolationException;
@@ -7,8 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.HashSet;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Kacper Urbaniec
@@ -20,16 +23,21 @@ public class ListValidatorTest {
     @Autowired
     private DefaultMovieListService service;
 
+    // Even though these are unit tests we need spring
+    // as the validator is managed by the framework.
+    // Controllers/Services are decorated with corresponding validation calls
+    // that also consider validation groups.
+
     @Test
     void create_list_fail_name_null() {
         var list = new MovieList();
         list.setName(null);
 
-        assertThrows(ConstraintViolationException.class, () -> {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
             service.createList(list);
         });
 
-        // TODO: Check exception message?
+        assertTrue(() -> ex.getMessage().contains("createList.addList.name"));
     }
 
     @Test
@@ -37,9 +45,11 @@ public class ListValidatorTest {
         var list = new MovieList();
         list.setName("");
 
-        assertThrows(ConstraintViolationException.class, () -> {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
             service.createList(list);
         });
+
+        assertTrue(() -> ex.getMessage().contains("createList.addList.name"));
     }
 
     @Test
@@ -47,9 +57,11 @@ public class ListValidatorTest {
         var list = new MovieList();
         list.setId(42L);
 
-        assertThrows(ConstraintViolationException.class, () -> {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
             service.createList(list);
         });
+
+        assertTrue(() -> ex.getMessage().contains("createList.addList.name"));
     }
 
     @Test
@@ -57,10 +69,65 @@ public class ListValidatorTest {
         var list = new MovieList();
         list.setId(null);
 
-        assertThrows(ConstraintViolationException.class, () -> {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
             service.updateList(list);
+        });
+
+        assertTrue(() -> ex.getMessage().contains("updateList.updateList.id"));
+    }
+
+    @Test
+    void create_list_with_movie_id_star_wars() {
+        assertDoesNotThrow(() -> {
+            var list = new MovieList();
+            list.setName("List with star wars");
+            list = service.createList(list);
+
+            Set<MediaRelation> movies = new HashSet<>();
+            var nonExistentMediaRelation = new MediaRelation();
+            nonExistentMediaRelation.setMovieList(list);
+            nonExistentMediaRelation.setMediaType("movie");
+            nonExistentMediaRelation.setMediaId(11L);
+            movies.add(nonExistentMediaRelation);
+            service.addItemsToList(list.getId(), movies);
         });
     }
 
-    // TODO: MediaRelationExists & other Test!
+    @Test
+    void update_list_fail_movie_id_doesnt_exists() {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
+            var list = new MovieList();
+            list.setName("List with movies");
+            list = service.createList(list);
+
+            Set<MediaRelation> movies = new HashSet<>();
+            var nonExistentMediaRelation = new MediaRelation();
+            nonExistentMediaRelation.setMovieList(list);
+            nonExistentMediaRelation.setMediaType("movie");
+            nonExistentMediaRelation.setMediaId(-1L);
+            movies.add(nonExistentMediaRelation);
+            service.addItemsToList(list.getId(), movies);
+        });
+
+        assertTrue(() -> ex.getMessage().contains("No such movie/tv"));
+    }
+
+    @Test
+    void update_list_fail_movie_id_might_not_exists() {
+        var ex = assertThrows(ConstraintViolationException.class, () -> {
+            var list = new MovieList();
+            list.setName("List with movies");
+            list = service.createList(list);
+
+            Set<MediaRelation> movies = new HashSet<>();
+            var nonExistentMediaRelation = new MediaRelation();
+            nonExistentMediaRelation.setMovieList(list);
+            nonExistentMediaRelation.setMediaType("movie");
+            nonExistentMediaRelation.setMediaId(Long.MAX_VALUE);
+            movies.add(nonExistentMediaRelation);
+            service.addItemsToList(list.getId(), movies);
+        });
+
+        assertTrue(() -> ex.getMessage().contains("No such movie/tv"));
+    }
 }

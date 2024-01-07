@@ -79,6 +79,18 @@ public class ListTests {
     }
 
     @Test
+    void fail_get_list_that_does_not_exist() {
+        var listId = 101L;
+        var requestUrl = "/tmdb/4/list/" + listId;
+
+        var response = restTemplate
+            .getForEntity(requestUrl, String.class);
+
+        assertTrue(response.getStatusCode().is4xxClientError());
+        assertEquals("List " + listId + " does not exist", response.getBody());
+    }
+
+    @Test
     void create_list() {
         var requestUrl = "/tmdb/4/list";
         var createRequest = MovieListDTO.builder()
@@ -95,8 +107,28 @@ public class ListTests {
         var createdList = response.getMovieListDTO();
         assertEquals(createRequest.getDescription(), createdList.getDescription());
         assertEquals(createRequest.getName(), createdList.getName());
-        assertEquals(createRequest.isVisible(), createdList.isVisible());
+        assertEquals(createRequest.getVisible(), createdList.getVisible());
         assertEquals(1, movieListRepository.count());
+    }
+
+    @Test
+    void fail_create_list_null_name() {
+        var requestUrl = "/tmdb/4/list";
+        var createRequest = MovieListDTO.builder()
+            .description("Hey!")
+            .name(null)
+            .visible(false)
+            .build();
+
+        var response = restTemplate
+            .postForEntity(requestUrl, createRequest, String.class);
+
+        assertTrue(response.getStatusCode().is4xxClientError());
+        assertTrue(() -> {
+            var errorMsg = response.getBody();
+            assertNotNull(errorMsg);
+            return errorMsg.contains("createList.addList.name");
+        });
     }
 
     @Test
@@ -120,8 +152,26 @@ public class ListTests {
         var updatedList = response.getMovieListDTO();
         assertEquals(updateRequest.getDescription(), updatedList.getDescription());
         assertEquals(updateRequest.getName(), updatedList.getName());
-        assertEquals(updateRequest.isVisible(), updatedList.isVisible());
+        assertEquals(updateRequest.getVisible(), updatedList.getVisible());
         assertEquals(1, movieListRepository.count());
+    }
+
+    @Test
+    void fail_update_list_that_does_not_exist() {
+        var listId = 101L;
+        var requestUrl = "/tmdb/4/list/" + listId;
+        var updateRequest = MovieListDTO.builder()
+            .id(listId)
+            .description("Hey Hey!")
+            .name("My Cooler List")
+            .visible(true)
+            .build();
+
+        var response = restTemplate
+            .exchange(requestUrl, HttpMethod.PUT, new HttpEntity<>(updateRequest), String.class);
+
+        assertTrue(response.getStatusCode().is4xxClientError());
+        assertEquals("List " + listId + " does not exist", response.getBody());
     }
 
     @Test
@@ -161,6 +211,24 @@ public class ListTests {
         assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(550L)));
         assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(244786L)));
         assertTrue(() -> items.stream().anyMatch(item -> item.getMediaId().equals(1396L)));
+    }
+
+    @Test
+    void fail_add_items_to_list_that_does_not_exist() {
+        var listId = 101L;
+        var requestUrl = "/tmdb/4/list/" + listId + "/items";
+        var addRequest = new MediaItemsDTO();
+        addRequest.setItems(List.of(
+            MediaItemDTO.builder().mediaId(550L).mediaType("movie").build(),
+            MediaItemDTO.builder().mediaId(244786L).mediaType("movie").build(),
+            MediaItemDTO.builder().mediaId(1396L).mediaType("tv").build()
+        ));
+
+        var response = restTemplate
+            .postForEntity(requestUrl, addRequest, String.class);
+
+        assertTrue(response.getStatusCode().is4xxClientError());
+        assertEquals("List " + listId + " does not exist", response.getBody());
     }
 
     @Test

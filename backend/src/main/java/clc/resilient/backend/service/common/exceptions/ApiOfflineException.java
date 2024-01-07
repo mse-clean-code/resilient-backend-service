@@ -4,7 +4,7 @@ package clc.resilient.backend.service.common.exceptions;
  * @author Kacper Urbaniec
  * @version 2023-12-23
  */
-public class ApiOfflineException extends RuntimeException {
+public class ApiOfflineException extends ApiException {
 
     public ApiOfflineException(Throwable cause) {
         super("api is offline", cause);

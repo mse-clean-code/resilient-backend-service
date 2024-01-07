@@ -9,6 +9,8 @@ import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 /**
  * @author Kacper Urbaniec
@@ -44,11 +47,11 @@ public class ListController {
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
     @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
     @RequestMapping({"/tmdb/4/account/{account_id}/lists"})
-    public CompletionStage<ResponseEntity<PaginatedResponseDTO>> accountLists(
+    public CompletionStage<ResponseEntity<?>> accountLists(
         @SuppressWarnings("unused") @PathVariable String account_id
     ) {
-        logger.debug("accountLists()");
-        return CompletableFuture.supplyAsync(() -> {
+        return catchValidationAndNotFoundExAsync(() -> {
+            logger.debug("accountLists()");
             var lists = movieListService.getAllWithoutItems();
             var listDtos = mapper.movieListToDto(lists);
             var response = PaginatedResponseDTO.builder()
@@ -64,24 +67,26 @@ public class ListController {
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @GetMapping("/tmdb/4/list/{list_id}")
-    public ResponseEntity<MovieListDTO> list(
+    public ResponseEntity<?> list(
         @PathVariable("list_id") @NotNull Long listId
     ) {
-        logger.debug("list({})", listId);
-        var list = movieListService.getWithItems(listId);
-        var listDto = mapper.movieListToDto(list);
-        return ResponseEntity.ok(listDto);
+        return catchValidationAndNotFoundEx(() -> {
+            logger.debug("list({})", listId);
+            var list = movieListService.getWithItems(listId);
+            var listDto = mapper.movieListToDto(list);
+            return ResponseEntity.ok(listDto);
+        });
     }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallbackCompletion")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallbackCompletion")
     @TimeLimiter(name = ListResilience.LIST_TIME_LIMITER, fallbackMethod = "timeLimiterFallback")
     @PostMapping("/tmdb/4/list")
-    public CompletionStage<ResponseEntity<ResponseDTO>> createList(
+    public CompletionStage<ResponseEntity<?>> createList(
         @RequestBody @NotNull MovieListDTO createListDto
     ) {
         logger.debug("createList({})", createListDto);
-        return CompletableFuture.supplyAsync(() -> {
+        return catchValidationAndNotFoundExAsync(() -> {
             var list = mapper.movieListToEntity(createListDto);
             list = movieListService.createList(list);
             var listDto = mapper.movieListToDto(list);
@@ -98,37 +103,42 @@ public class ListController {
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @PutMapping("/tmdb/4/list/{list_id}")
-    public ResponseEntity<ResponseDTO> updateList(
-        @PathVariable("list_id") @NotNull String listId,
+    public ResponseEntity<?> updateList(
+        @PathVariable("list_id") @NotNull Long listId,
         @RequestBody @NotNull MovieListDTO updateListDto
     ) {
-        logger.debug("updateList({}, {})", listId, updateListDto);
-        var list = mapper.movieListToEntity(updateListDto);
-        list = movieListService.updateList(list);
-        var listDto = mapper.movieListToDto(list);
-        var response = ResponseDTO.builder()
-            .success(true)
-            .statusMessage("The item/record was updated successfully.")
-            .id(listDto.getId())
-            .movieListDTO(listDto)
-            .build();
-        return ResponseEntity.ok(response);
+        return catchValidationAndNotFoundEx(() -> {
+            logger.debug("updateList({}, {})", listId, updateListDto);
+            updateListDto.setId(listId);
+            var list = mapper.movieListToEntity(updateListDto);
+            list = movieListService.updateList(list);
+            var listDto = mapper.movieListToDto(list);
+            var response = ResponseDTO.builder()
+                .success(true)
+                .statusMessage("The item/record was updated successfully.")
+                .id(listDto.getId())
+                .movieListDTO(listDto)
+                .build();
+            return ResponseEntity.ok(response);
+        });
     }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @DeleteMapping("/tmdb/4/{list_id}")
-    public ResponseEntity<ResponseDTO> deleteList(
+    public ResponseEntity<?> deleteList(
         @PathVariable("list_id") @NotNull Long listId
     ) {
-        logger.debug("deleteList({})", listId);
-        movieListService.deleteList(listId);
-        var response = ResponseDTO.builder()
-            .success(true)
-            .statusMessage("The item/record was deleted successfully.")
-            .id(listId)
-            .build();
-        return ResponseEntity.ok(response);
+        return catchValidationAndNotFoundEx(() -> {
+            logger.debug("deleteList({})", listId);
+            movieListService.deleteList(listId);
+            var response = ResponseDTO.builder()
+                .success(true)
+                .statusMessage("The item/record was deleted successfully.")
+                .id(listId)
+                .build();
+            return ResponseEntity.ok(response);
+        });
     }
 
     //endregion
@@ -138,44 +148,76 @@ public class ListController {
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @PostMapping("/tmdb/4/list/{list_id}/items")
-    public ResponseEntity<ResponseDTO> addItemsToList(
+    public ResponseEntity<?> addItemsToList(
         @PathVariable("list_id") @NotNull Long listId,
         @RequestBody @NotNull MediaItemsDTO itemsDto
     ) {
-        logger.debug("addItemsToList({}, {})", listId, itemsDto);
-        var items = mapper.mediaItemToEntity(itemsDto.getItems());
-        var list = movieListService.addItemsToList(listId, items);
-        var listDto = mapper.movieListToDto(list);
-        var response = ResponseDTO.builder()
-            .success(true)
-            .statusMessage("The item/record was updated successfully.")
-            .id(listDto.getId())
-            .movieListDTO(listDto)
-            .build();
-        return ResponseEntity.ok(response);
+        return catchValidationAndNotFoundEx(() -> {
+            logger.debug("addItemsToList({}, {})", listId, itemsDto);
+            var items = mapper.mediaItemToEntity(itemsDto.getItems());
+            var list = movieListService.addItemsToList(listId, items);
+            var listDto = mapper.movieListToDto(list);
+            var response = ResponseDTO.builder()
+                .success(true)
+                .statusMessage("The item/record was updated successfully.")
+                .id(listDto.getId())
+                .movieListDTO(listDto)
+                .build();
+            return ResponseEntity.ok(response);
+        });
     }
 
     @Retry(name = ListResilience.LIST_RETRY, fallbackMethod = "retryFallback")
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @DeleteMapping("/tmdb/4/list/{list_id}/items")
-    public ResponseEntity<ResponseDTO> removeItemsFromList(
+    public ResponseEntity<?> removeItemsFromList(
         @PathVariable("list_id") @NotNull Long listId,
         @RequestBody @NotNull MediaItemsDTO itemsDto
     ) {
-        logger.debug("removeItemsFromList({}, {})", listId, itemsDto);
-        var items = mapper.mediaItemToEntity(itemsDto.getItems());
-        var list = movieListService.removeItemsFromList(listId, items);
-        var listDto = mapper.movieListToDto(list);
-        var response = ResponseDTO.builder()
-            .success(true)
-            .statusMessage("The item/record was updated successfully.")
-            .id(listDto.getId())
-            .movieListDTO(listDto)
-            .build();
-        return ResponseEntity.ok(response);
+        return catchValidationAndNotFoundEx(() -> {
+            logger.debug("removeItemsFromList({}, {})", listId, itemsDto);
+            var items = mapper.mediaItemToEntity(itemsDto.getItems());
+            var list = movieListService.removeItemsFromList(listId, items);
+            var listDto = mapper.movieListToDto(list);
+            var response = ResponseDTO.builder()
+                .success(true)
+                .statusMessage("The item/record was updated successfully.")
+                .id(listDto.getId())
+                .movieListDTO(listDto)
+                .build();
+            return ResponseEntity.ok(response);
+        });
     }
 
     //endregion
+
+    //================================================================================
+    // Error Handling which does not trigger Resilience4j Fallbacks in some cases
+    //================================================================================
+
+    ResponseEntity<?> catchValidationAndNotFoundEx(
+        Supplier<ResponseEntity<?>> supplier
+    ) {
+        try {
+            return supplier.get();
+        } catch (ConstraintViolationException | EntityNotFoundException ex) {
+            logger.debug("catchValidationAndNotFound", ex);
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
+    }
+
+    CompletableFuture<ResponseEntity<?>> catchValidationAndNotFoundExAsync(
+        Supplier<ResponseEntity<?>> supplier
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return supplier.get();
+            } catch (ConstraintViolationException | EntityNotFoundException ex) {
+                logger.debug("catchValidationAndNotFound", ex);
+                return ResponseEntity.badRequest().body(ex.getMessage());
+            }
+        });
+    }
 
     //================================================================================
     // Resilience4j Fallbacks
