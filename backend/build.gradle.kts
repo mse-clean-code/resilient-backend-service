@@ -15,6 +15,23 @@ repositories {
     mavenCentral()
 }
 
+sourceSets {
+    create("resilienceTest") {
+        java.srcDir("src/resilience-test/java")
+        resources.srcDir("src/resilience-test/resources")
+        compileClasspath += main.get().output + sourceSets["test"].output
+        runtimeClasspath += main.get().output + sourceSets["test"].output
+        configurations["resilienceTestImplementation"]
+            .extendsFrom(configurations["testImplementation"])
+        configurations["resilienceTestRuntimeOnly"]
+            .extendsFrom(configurations["testRuntimeOnly"])
+        configurations["resilienceTestCompileOnly"]
+            .extendsFrom(configurations["testCompileOnly"])
+        configurations["resilienceTestAnnotationProcessor"]
+            .extendsFrom(configurations["testAnnotationProcessor"])
+    }
+}
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -43,4 +60,9 @@ tasks.withType<Test> {
 
 tasks.bootRun {
     jvmArgs = listOf("-Dspring.output.ansi.enabled=ALWAYS")
+}
+
+val resilienceTest by tasks.registering(Test::class) {
+    testClassesDirs = sourceSets["resilienceTest"].output.classesDirs
+    classpath = sourceSets["resilienceTest"].runtimeClasspath
 }
