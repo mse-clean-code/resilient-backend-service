@@ -22,10 +22,14 @@ const URL_BASE = (id: number) => [baseUrlApiV4, id].join("/");
 export class ListResource {
   private readonly http: HttpClient = inject(HttpClient);
 
-  createList = (params: TMDBListCreateUpdateParams): Observable<number> =>
-    this.http
+  createList = (params: TMDBListCreateUpdateParams) => {
+    if (params.private !== null && params.private !== undefined) {
+      (params as any).public = !params.private;
+    }
+    return this.http
       .post<ListCreateResponse>(URL_LIST_BASE, params)
       .pipe(map(({ id }) => id));
+  }
 
   fetchList = (id: string): Observable<Record<string, TMDBListModel>> =>
     this.http
