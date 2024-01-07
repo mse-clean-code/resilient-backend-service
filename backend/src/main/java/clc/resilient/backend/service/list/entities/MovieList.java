@@ -36,4 +36,17 @@ public class MovieList {
     @JoinColumn(name = "movie_list_id")
     private Set<MediaRelation> items = new HashSet<>(0);
     private int numberOfItems;
+
+    @Override
+    public String toString() {
+        return "MovieList{" +
+            "id=" + id +
+            ", name='" + name + '\'' +
+            ", description='" + description + '\'' +
+            ", iso6391='" + iso6391 + '\'' +
+            ", visible=" + visible +
+            ", backdropPath='" + backdropPath + '\'' +
+            ", numberOfItems=" + numberOfItems +
+            '}';
+    }
 }

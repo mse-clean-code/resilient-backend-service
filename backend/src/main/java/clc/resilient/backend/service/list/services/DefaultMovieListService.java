@@ -78,7 +78,7 @@ public class DefaultMovieListService implements MovieListService {
         if (updateList.getBackdropPath() != null)
             list.setBackdropPath(updateList.getBackdropPath());
 
-        return updateList;
+        return list;
     }
 
     @Override

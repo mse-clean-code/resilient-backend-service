@@ -46,4 +46,13 @@ public class MediaRelation {
     public int hashCode() {
         return Objects.hash(mediaId, mediaType);
     }
+
+    @Override
+    public String toString() {
+        return "MediaRelation{" +
+            "id=" + id +
+            ", mediaId=" + mediaId +
+            ", mediaType='" + mediaType + '\'' +
+            '}';
+    }
 }
