@@ -10,6 +10,22 @@ cd backend
 ```
 
 > OpenAPI Specification can be found under http://localhost:8080/swagger-ui/index.html
+>
+> Select the `TMDBv4` definition to test out the list feature!
+
+> Use environment `spring.profiles.active=datagen` to perform simple data generation
+
+Unit & Integration Tests can be run via
+
+```bash
+./gradlew test
+```
+
+Resilience Tests can be run via
+
+```bash
+./gradlew resilienceTest
+```
 
 ### Frontend
 
@@ -27,6 +43,8 @@ cd frontend
 npm install
 npm run start
 ```
+
+![image-20240107201414167](.img/frontend.png)
 
 ## 🧑‍💻 Architecture
 
