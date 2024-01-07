@@ -188,7 +188,7 @@ public class ListController {
      */
     @SuppressWarnings("unused")
     public ResponseEntity<String> retryFallback(Exception ex) {
-        logger.warn("retryFallback", ex);
+        logger.warn("retryFallback {}", ex.getMessage());
         return new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -199,7 +199,7 @@ public class ListController {
     public ResponseEntity<String> circuitBreakerFallback(CallNotPermittedException ex) {
         // Note: Specific exception type is important! Else retry fallback will be always executed
         // https://resilience4j.readme.io/docs/getting-started-3#fallback-methods
-        logger.warn("circuitBreakerFallback", ex);
+        logger.warn("circuitBreakerFallback {}", ex.getMessage());
         return new ResponseEntity<>("service is unavailable", HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -208,7 +208,7 @@ public class ListController {
      */
     @SuppressWarnings("unused")
     public CompletionStage<ResponseEntity<String>> timeLimiterFallback(TimeoutException ex) {
-        logger.warn("timeLimiterFallback", ex);
+        logger.warn("timeLimiterFallback {}", ex.getMessage());
         return CompletableFuture.completedFuture(new ResponseEntity<>("Request timed out", HttpStatus.REQUEST_TIMEOUT));
     }
 
@@ -217,7 +217,7 @@ public class ListController {
      */
     @SuppressWarnings("unused")
     public CompletionStage<ResponseEntity<String>> retryFallbackCompletion(Exception ex) {
-        logger.warn("retryFallback", ex);
+        logger.warn("retryFallback {}", ex.getMessage());
         return CompletableFuture.completedFuture(new ResponseEntity<>("all retries have exhausted", HttpStatus.SERVICE_UNAVAILABLE));
     }
 
@@ -228,7 +228,7 @@ public class ListController {
     public CompletionStage<ResponseEntity<String>> circuitBreakerFallbackCompletion(CallNotPermittedException ex) {
         // Note: Specific exception type is important! Else retry fallback will be always executed
         // https://resilience4j.readme.io/docs/getting-started-3#fallback-methods
-        logger.warn("circuitBreakerFallback", ex);
+        logger.warn("circuitBreakerFallback {}", ex.getMessage());
         return CompletableFuture.completedFuture(new ResponseEntity<>("service is unavailable", HttpStatus.SERVICE_UNAVAILABLE));
     }
 
