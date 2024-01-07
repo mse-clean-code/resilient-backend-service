@@ -3,6 +3,8 @@ package clc.resilient.backend.service.list.entities;
 import clc.resilient.backend.service.list.validators.MediaRelationExists;
 import clc.resilient.backend.service.list.validators.groups.ListServiceValidation;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,7 +22,10 @@ public class MediaRelation {
     @GeneratedValue
     Long id;
 
+    @NotNull
     Long mediaId;
+    @NotNull
+    @NotEmpty
     String mediaType;
 
     @ManyToOne
