@@ -14,6 +14,7 @@ const URL_LIST_BASE = [baseUrlApiV4, 'list'].join('/');
 const URL_EXISTING_LIST = (id: number) => [URL_LIST_BASE, id].join('/');
 const URL_ADD_MOVIE_TO_LIST = (id: number) =>
   [URL_EXISTING_LIST(id), 'items'].join('/');
+const URL_BASE = (id: number) => [baseUrlApiV4, id].join("/");
 
 @Injectable({
   providedIn: 'root',
@@ -31,13 +32,18 @@ export class ListResource {
       .get<TMDBListModel>(URL_EXISTING_LIST(+id))
       .pipe(map((list) => ({ [id]: list })));
 
-  updateList = (params: TMDBListCreateUpdateParams) =>
-    this.http.put(URL_EXISTING_LIST(params.id || 0), params);
+  updateList = (params: TMDBListCreateUpdateParams) => {
+    if (params.private !== null && params.private !== undefined) {
+      (params as any).public = !params.private;
+    }
+    return this.http.put(URL_EXISTING_LIST(params.id || 0), params);
+  }
+    
 
   addMovieToList = (params: TMDBAddMovieToListParams) =>
     this.http.post(URL_ADD_MOVIE_TO_LIST(params.id), params);
   deleteMovieFromList = (params: TMDBAddMovieToListParams) =>
     this.http.delete(URL_ADD_MOVIE_TO_LIST(params.id), { body: params });
 
-  deleteList = (id: string) => this.http.delete(URL_EXISTING_LIST(+id));
+  deleteList = (id: string) => this.http.delete(URL_BASE(+id));
 }

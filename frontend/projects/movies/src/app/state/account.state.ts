@@ -26,7 +26,9 @@ export class AccountState extends RxState<AccountStateModel> {
 
     if (isPlatformBrowser(this.platformId)) {
       // set accountId if found in localStorage
-      this.set({ accountId: window.localStorage.getItem('accountId') });
+      // this.set({ accountId: window.localStorage.getItem('accountId') });
+      // Always be logged in...
+      this.set({ accountId: "0" });
     }
 
     this.connect(

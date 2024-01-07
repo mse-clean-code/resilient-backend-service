@@ -1,7 +1,8 @@
-<ng-container *rxIf="loggedIn$; else guest">
+<!--<ng-container *rxIf="loggedIn$; else guest">-->
+<ng-container *rxIf="true">
   <div><a [routerLink]="['account/list/create']">Create New List</a></div>
   <div><a [routerLink]="['account/my-lists']">My Lists</a></div>
-  <div>
+  <!--<div>
     <a
       data-uf="profile-menu-item-signout"
       (click)="ui.signOut($event)"
@@ -10,7 +11,7 @@
     >
       Logout
     </a>
-  </div>
+  </div>-->
 </ng-container>
 <ng-template #guest>
   <div><p>Guest Profile</p></div>
