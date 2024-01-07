@@ -104,11 +104,12 @@ public class ListController {
     @CircuitBreaker(name = ListResilience.LIST_CIRCUIT_BREAKER, fallbackMethod = "circuitBreakerFallback")
     @PutMapping("/tmdb/4/list/{list_id}")
     public ResponseEntity<?> updateList(
-        @PathVariable("list_id") @NotNull String listId,
+        @PathVariable("list_id") @NotNull Long listId,
         @RequestBody @NotNull MovieListDTO updateListDto
     ) {
         return catchValidationAndNotFoundEx(() -> {
             logger.debug("updateList({}, {})", listId, updateListDto);
+            updateListDto.setId(listId);
             var list = mapper.movieListToEntity(updateListDto);
             list = movieListService.updateList(list);
             var listDto = mapper.movieListToDto(list);

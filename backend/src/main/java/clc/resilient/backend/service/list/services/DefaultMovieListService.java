@@ -44,7 +44,7 @@ public class DefaultMovieListService implements MovieListService {
     public MovieList getWithItems(@NotNull Long id) {
         logger.debug("getWithItems({})", id);
         var list = movieListRepository.findById(id).
-            orElseThrow(EntityNotFoundException::new);
+            orElseThrow(() -> new EntityNotFoundException("List " + id + " does not exist"));
         fetchTmdbItems(list);
         return list;
     }
@@ -65,15 +65,18 @@ public class DefaultMovieListService implements MovieListService {
     @Validated({UpdateListValidation.class})
     public MovieList updateList(@Valid MovieList updateList) {
         logger.debug("updateList({})", updateList);
-        // TODO: Exception Handling
-        var updateReference = movieListRepository.getReferenceById(updateList.getId());
+        var id = updateList.getId();
+        var list = movieListRepository.findById(id).
+            orElseThrow(() -> new EntityNotFoundException("List " + id + " does not exist"));
+
         if (updateList.getName() != null && !updateList.getName().isEmpty())
-            updateReference.setName(updateList.getName());
+            list.setName(updateList.getName());
         if (updateList.getDescription() != null)
-            updateReference.setDescription(updateList.getDescription());
-        updateReference.setVisible(updateList.isVisible());
-        if (updateList.getBackdrop_path() != null)
-            updateReference.setBackdrop_path(updateList.getBackdrop_path());
+            list.setDescription(updateList.getDescription());
+        if (updateList.getVisible() != null)
+            list.setVisible(updateList.getVisible());
+        if (updateList.getBackdropPath() != null)
+            list.setBackdropPath(updateList.getBackdropPath());
 
         return updateList;
     }
@@ -110,9 +113,8 @@ public class DefaultMovieListService implements MovieListService {
         @NotNull Long id, Set<MediaRelation> mediaItems,
         BiConsumer<Set<MediaRelation>, Set<MediaRelation>> operation
     ) {
-        // TODO: Exception handling
         var list = movieListRepository.findById(id)
-            .orElseThrow(EntityNotFoundException::new);
+            .orElseThrow(() -> new EntityNotFoundException("List " + id + " does not exist"));
         operation.accept(list.getItems(), mediaItems);
         list.setNumberOfItems(list.getItems().size());
         fetchTmdbItems(list);

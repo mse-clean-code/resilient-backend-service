@@ -24,13 +24,13 @@ public class MovieList {
     @NotNull(groups = UpdateListValidation.class)
     private Long id;
 
-    @NotNull(groups = {CreateListValidation.class, Default.class})
-    @NotEmpty(groups = {CreateListValidation.class, Default.class})
+    @NotNull(groups = {CreateListValidation.class})
+    @NotEmpty(groups = {CreateListValidation.class})
     private String name;
     private String description;
     private String iso6391;
-    private boolean visible;
-    private String backdrop_path;
+    private Boolean visible;
+    private String backdropPath;
 
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "movie_list_id")
